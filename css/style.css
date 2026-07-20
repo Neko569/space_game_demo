@@ -1,0 +1,99 @@
+/* ============================================================
+ * style.css — 深空 UI 风格
+ * ============================================================ */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  background: #05060e; color: #dfe8f5;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  height: 100%; overflow: hidden;
+}
+#stage {
+  position: relative; width: 960px; height: 600px;
+  margin: 12px auto; border: 1px solid #1b2740; border-radius: 8px;
+  overflow: hidden; box-shadow: 0 0 40px rgba(40,90,180,0.25);
+  background: #05060e;
+}
+#game { display: block; image-rendering: pixelated; }
+
+.hud { position: absolute; z-index: 5; pointer-events: none; }
+.muted { color: #8ea2c0; }
+
+/* 顶栏 */
+#topbar {
+  top: 0; left: 0; right: 0; height: 38px; display: flex; justify-content: space-between;
+  align-items: center; padding: 0 12px;
+  background: linear-gradient(180deg, rgba(8,14,28,0.9), rgba(8,14,28,0));
+}
+.tb-left { display: flex; gap: 12px; align-items: baseline; }
+#sysName { font-weight: 700; font-size: 16px; letter-spacing: 1px; color: #cfe0ff; text-shadow: 0 0 8px rgba(80,150,255,0.6); }
+.tb-right { display: flex; gap: 8px; align-items: center; }
+.chip { background: rgba(30,50,90,0.7); border: 1px solid #2c4a7a; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+.iconbtn { pointer-events: auto; background: rgba(30,50,90,0.7); border: 1px solid #2c4a7a; color: #cfe0ff; border-radius: 6px; cursor: pointer; width: 28px; height: 24px; }
+
+/* 生命体征 */
+#vitals { left: 10px; top: 46px; width: 230px; }
+.bar-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.bar-label { width: 30px; font-size: 11px; color: #9fb4d4; }
+.bar { flex: 1; height: 12px; background: rgba(10,18,34,0.8); border: 1px solid #243a5e; border-radius: 6px; overflow: hidden; }
+.fill { height: 100%; transition: width 0.15s; }
+.fill.hp { background: linear-gradient(90deg, #ff5a5a, #ff9b6b); }
+.fill.fuel { background: linear-gradient(90deg, #3fa9ff, #5ad7ff); }
+.bar-text { font-size: 10px; color: #b9cae6; width: 64px; text-align: right; }
+.cargo { font-size: 11px; color: #c9d6ee; margin-top: 2px; background: rgba(10,18,34,0.6); padding: 3px 6px; border-radius: 5px; display: inline-block; }
+
+/* 小地图 */
+#mapWrap { right: 10px; top: 46px; text-align: center; }
+#minimap { background: rgba(8,12,24,0.85); border: 1px solid #243a5e; border-radius: 6px; image-rendering: pixelated; }
+.map-cap { font-size: 10px; color: #8ea2c0; margin-top: 2px; }
+
+/* 日志 */
+#log { left: 10px; bottom: 10px; width: 420px; font-size: 12px; line-height: 1.5; }
+#log div { text-shadow: 0 1px 2px #000; }
+
+/* 提示 */
+#prompt {
+  left: 50%; bottom: 56px; transform: translateX(-50%); display: none;
+  background: rgba(20,40,80,0.85); border: 1px solid #3fa9ff; color: #cfe7ff;
+  padding: 6px 14px; border-radius: 16px; font-size: 13px; box-shadow: 0 0 16px rgba(60,160,255,0.4);
+}
+
+/* 覆盖层 / 面板 */
+.overlay {
+  position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+  background: rgba(3,5,12,0.78); backdrop-filter: blur(2px);
+}
+.panel {
+  width: 560px; max-width: 92%; background: linear-gradient(180deg, #0c1426, #0a1020);
+  border: 1px solid #284a7a; border-radius: 12px; padding: 26px 30px;
+  box-shadow: 0 0 40px rgba(50,120,255,0.25);
+}
+.panel.start h1 { font-size: 34px; letter-spacing: 8px; text-align: center; color: #cfe0ff; text-shadow: 0 0 18px rgba(80,150,255,0.7); }
+.subtitle { text-align: center; color: #6f86ad; letter-spacing: 3px; font-size: 12px; margin: 4px 0 16px; }
+.brief { font-size: 13px; line-height: 1.7; color: #c2d0e8; background: rgba(20,35,65,0.4); padding: 12px 14px; border-radius: 8px; border-left: 3px solid #3fa9ff; }
+.brief b { color: #8fd0ff; }
+.controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px 10px; margin: 16px 0; font-size: 12px; color: #aebfdc; }
+.controls b { color: #fff; }
+.bigbtn {
+  display: block; width: 100%; margin-top: 6px; padding: 12px; font-size: 15px; font-weight: 700; letter-spacing: 2px;
+  color: #04101f; background: linear-gradient(90deg, #4f9dff, #5ad7ff); border: none; border-radius: 8px; cursor: pointer;
+}
+.bigbtn:hover { filter: brightness(1.1); }
+.bigbtn.ghost { background: transparent; color: #8fd0ff; border: 1px solid #3fa9ff; margin-top: 16px; }
+
+.panel.dock h2, .panel.dead h2 { color: #cfe0ff; margin-bottom: 6px; }
+#upgradeList { margin: 14px 0; }
+.up-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 12px; margin-bottom: 8px; background: rgba(18,32,60,0.6);
+  border: 1px solid #244a7a; border-radius: 8px;
+}
+.up-row.disabled { opacity: 0.55; }
+.up-info { font-size: 13px; line-height: 1.5; }
+.up-info b { color: #cfe0ff; }
+.lv { color: #5ad7ff; font-size: 12px; }
+.cost { font-size: 12px; }
+.up-btn {
+  flex: none; padding: 8px 16px; font-weight: 700; color: #04101f;
+  background: linear-gradient(90deg, #4f9dff, #5ad7ff); border: none; border-radius: 6px; cursor: pointer;
+}
+.up-row.disabled .up-btn { background: #3a4a66; color: #8ea2c0; cursor: not-allowed; }

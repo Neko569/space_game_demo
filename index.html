@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>星渊探险 · Star Abyss</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="stage">
+    <canvas id="game"></canvas>
+
+    <!-- 顶部状态条 -->
+    <div id="topbar" class="hud">
+      <div class="tb-left">
+        <span id="sysName">—</span>
+        <span id="sysRace" class="muted">主导种族：—</span>
+      </div>
+      <div class="tb-right">
+        <span id="statSys" class="chip">星系 1</span>
+        <span id="statKills" class="chip">击毁 0</span>
+        <button id="muteBtn" class="iconbtn" title="静音 (M)">🔊</button>
+      </div>
+    </div>
+
+    <!-- 左侧生命体征 -->
+    <div id="vitals" class="hud">
+      <div class="bar-row">
+        <span class="bar-label">船体</span>
+        <div class="bar"><div id="hpFill" class="fill hp"></div></div>
+        <span id="hpText" class="bar-text">100/100</span>
+      </div>
+      <div class="bar-row">
+        <span class="bar-label">燃料</span>
+        <div class="bar"><div id="fuelFill" class="fill fuel"></div></div>
+        <span id="fuelText" class="bar-text">100/100</span>
+      </div>
+      <div id="cargoText" class="cargo">货舱 0/40</div>
+    </div>
+
+    <!-- 小地图 -->
+    <div id="mapWrap" class="hud">
+      <canvas id="minimap" width="170" height="170"></canvas>
+      <div class="map-cap">星系雷达</div>
+    </div>
+
+    <!-- 消息日志 -->
+    <div id="log" class="hud"></div>
+
+    <!-- 上下文提示 -->
+    <div id="prompt" class="hud"></div>
+
+    <!-- 开始界面 -->
+    <div id="startScreen" class="overlay">
+      <div class="panel start">
+        <h1>星 渊 探 险</h1>
+        <p class="subtitle">STAR ABYSS · 开放宇宙资源探险</p>
+        <div class="brief">
+          <p>驾驶你的联邦侦察舰深入未知星域。在开放世界中<b>采集资源</b>、<b>升级飞船</b>，
+          借由<b>虫洞</b>跃迁至其它星系。途中你将遭遇各具特色的<b>星际种族</b>——小心虫族的群涌、晶灵的远程压制、铁卫的钢铁洪流，亦可追捕游商缴获稀有金属。</p>
+        </div>
+        <div class="controls">
+          <div><b>W / ↑</b> 推进</div><div><b>S / ↓</b> 减速</div>
+          <div><b>A·D / ←→</b> 转向</div><div><b>空格</b> 开火</div>
+          <div><b>E</b> 停靠空间站</div><div><b>M</b> 静音</div>
+        </div>
+        <button id="startBtn" class="bigbtn">开始探险</button>
+      </div>
+    </div>
+
+    <!-- 空间站升级面板 -->
+    <div id="dockPanel" class="overlay" style="display:none">
+      <div class="panel dock">
+        <h2>🛰 空间站 · 船坞</h2>
+        <p class="muted">维修与补给已免费完成。消耗采集到的资源升级飞船模块。</p>
+        <div id="upgradeList"></div>
+        <button id="closeDockBtn" class="bigbtn ghost">离港 (E / Esc)</button>
+      </div>
+    </div>
+
+    <!-- 死亡界面 -->
+    <div id="deathPanel" class="overlay" style="display:none">
+      <div class="panel dead">
+        <h2>舰船损毁</h2>
+        <p id="deathStats" class="muted"></p>
+        <p class="muted">深空无情，但探险永不止息。</p>
+        <button id="restartBtn" class="bigbtn">重新出击</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/races.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
