@@ -59,6 +59,9 @@ const Game = {
       if (k === 'escape' && this.state === 'docked') this.closeDock();
       if (k === 'e' && this.state === 'docked') this.closeDock();
       if (k === 'm') { this.muted = !this.muted; document.getElementById('muteBtn').textContent = this.muted ? '🔇' : '🔊'; }
+      if (k === 'q' && this.player) this.player.switchWeapon();
+      else if (k === '1' && this.player) this.player.selectWeapon(0);
+      else if (k === '2' && this.player) this.player.selectWeapon(1);
     });
   },
 
@@ -119,7 +122,7 @@ const Game = {
 
     stage.addEventListener('pointerdown', (e) => {
       if (this.state !== 'playing') return;
-      if (e.target.id === 'btnFire' || e.target.id === 'btnDock') return;
+      if (e.target.id === 'btnFire' || e.target.id === 'btnDock' || e.target.id === 'btnWeapon') return;
       const rect = stage.getBoundingClientRect();
       if (e.clientX - rect.left < rect.width / 2) {
         e.preventDefault();
@@ -140,6 +143,12 @@ const Game = {
     const fu = (e) => { e.preventDefault(); Input.keys[' '] = false; };
     fire.addEventListener('pointerdown', fd); fire.addEventListener('pointerup', fu);
     fire.addEventListener('pointercancel', fu); fire.addEventListener('pointerleave', fu);
+
+    // 切换武器
+    const wbtn = document.getElementById('btnWeapon');
+    if (wbtn) {
+      wbtn.addEventListener('pointerdown', (e) => { e.preventDefault(); if (Game.player) Game.player.switchWeapon(); });
+    }
 
     // 停靠：靠近空间站时显示，点按停靠
     const dock = document.getElementById('btnDock');
@@ -179,6 +188,8 @@ const Game = {
     this.systemIndex = 0; this.systemSeed = 12345; this.kills = 0;
     this.messages = [];
     this.player = new Player();
+    this.player.invuln = 3.0;                 // 开局 3 秒无敌，降低初期压力
+    this.player.cargo = { mineral: 24, energy: 14, rare: 1 }; // 起步资源，便于早期升级
     this.loadSystem(true);
     this.state = 'playing';
     document.getElementById('startScreen').style.display = 'none';
@@ -497,6 +508,17 @@ const Game = {
     const log = document.getElementById('log');
     log.innerHTML = this.messages.map(m =>
       `<div style="opacity:${Utils.clamp(m.t / 5, 0.2, 1)}">▸ ${m.text}</div>`).join('');
+    this.updateWeaponTag();
+  },
+
+  // 武器指示（HUD 文本 + 移动端切换键图标）
+  updateWeaponTag() {
+    const w = this.player ? this.player.weapon : 0;
+    const name = w === 1 ? '散射炮' : '主炮';
+    const el = document.getElementById('weaponText');
+    if (el) el.textContent = '武器 ' + name;
+    const wb = document.getElementById('btnWeapon');
+    if (wb) wb.textContent = w === 1 ? '🔱' : '🔫';
   },
 
   // —— 渲染 ——

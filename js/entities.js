@@ -16,6 +16,7 @@ class Player {
     this.up = { engine: 0, hull: 0, weapon: 0, cargo: 0, fuel: 0 };
     this.thrusting = false;
     this.fireTimer = 0;
+    this.weapon = 0;               // 0=主炮 1=散射炮
     this.invuln = 0;               // 受击无敌帧
     this.radius = 14;
     this.recompute();
@@ -30,6 +31,8 @@ class Player {
     this.turn = 3.4;
     this.bulletDmg = 10 + this.up.weapon * 7;
     this.fireCD = Math.max(0.12, 0.4 - this.up.weapon * 0.06);
+    this.spreadCD = Math.max(0.3, 0.78 - this.up.weapon * 0.07);   // 散射炮射击间隔
+    this.spreadCount = 3 + Math.min(2, Math.floor(this.up.weapon / 3)); // 散射弹数随武器等级增长(3~5)
     this.cargoCap = 50 + this.up.cargo * 30;
   }
 
@@ -78,11 +81,12 @@ class Player {
     if (this.y < m) { this.y = m; this.vy = Math.abs(this.vy) * 0.4; }
     if (this.y > CONFIG.WORLD - m) { this.y = CONFIG.WORLD - m; this.vy = -Math.abs(this.vy) * 0.4; }
 
-    // 射击
+    // 射击（不同武器使用各自冷却）
     this.fireTimer -= dt;
+    const cd = this.weapon === 1 ? this.spreadCD : this.fireCD;
     if (Input.isDown(' ') && this.fireTimer <= 0) {
       this.shoot();
-      this.fireTimer = this.fireCD;
+      this.fireTimer = cd;
     }
     if (this.invuln > 0) this.invuln -= dt;
   }
@@ -90,8 +94,28 @@ class Player {
   shoot() {
     const fx = Math.sin(this.angle), fy = -Math.cos(this.angle);
     const bx = this.x + fx * 16, by = this.y + fy * 16;
-    Game.bullets.push(new Bullet(bx, by, fx * 560 + this.vx, fy * 560 + this.vy, this.bulletDmg, 'player'));
+    if (this.weapon === 1) {
+      // 散射炮：以船头为中心呈扇形发射多发
+      const n = this.spreadCount, span = 0.52, half = span / 2;
+      for (let i = 0; i < n; i++) {
+        const off = n === 1 ? 0 : -half + span * i / (n - 1);
+        const ca = Math.cos(off), sa = Math.sin(off);
+        const rx = fx * ca - fy * sa, ry = fx * sa + fy * ca;
+        Game.bullets.push(new Bullet(bx, by, rx * 540 + this.vx, ry * 540 + this.vy, this.bulletDmg, 'player'));
+      }
+    } else {
+      Game.bullets.push(new Bullet(bx, by, fx * 560 + this.vx, fy * 560 + this.vy, this.bulletDmg, 'player'));
+    }
     Game.sfx('shoot');
+  }
+
+  switchWeapon() { this.selectWeapon(this.weapon === 0 ? 1 : 0); }
+  selectWeapon(w) {
+    if (this.weapon === w) return;
+    this.weapon = w;
+    Game.sfx('buy');
+    Game.msg('切换武器：' + (w === 0 ? '主炮' : '散射炮'));
+    Game.updateWeaponTag();
   }
 
   hit(dmg) {

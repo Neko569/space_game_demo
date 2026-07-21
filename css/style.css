@@ -141,6 +141,15 @@ body.touchui #stage { touch-action: none; }
   box-shadow: 0 0 16px rgba(255,210,110,0.5);
 }
 #btnDock:active { background: rgba(215,185,60,0.9); transform: scale(0.95); }
+#btnWeapon {
+  position: absolute; right: 30px; bottom: 224px;
+  width: 62px; height: 56px; border-radius: 14px; font-size: 26px; line-height: 1;
+  color: #d9c8ff; background: rgba(90,60,150,0.55); border: 2px solid #b06bff;
+  pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none;
+  backdrop-filter: blur(2px); -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 0 16px rgba(160,100,255,0.45);
+}
+#btnWeapon:active { background: rgba(140,90,220,0.9); transform: scale(0.95); }
 
 /* 竖屏 / 小屏自适应 */
 @media (max-width: 640px) {

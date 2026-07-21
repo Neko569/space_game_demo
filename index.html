@@ -36,6 +36,7 @@
         <span id="fuelText" class="bar-text">100/100</span>
       </div>
       <div id="cargoText" class="cargo">货舱 0/40</div>
+      <div id="weaponText" class="cargo">武器 主炮</div>
     </div>
 
     <!-- 小地图 -->
@@ -53,6 +54,7 @@
     <!-- 触屏控制（移动端自动显示） -->
     <div id="touchControls">
       <div id="joyBase"><div id="joyKnob"></div></div>
+      <button id="btnWeapon" aria-label="切换武器">🔫</button>
       <button id="btnFire" aria-label="开火">🔥</button>
       <button id="btnDock" aria-label="停靠">⚓</button>
     </div>
@@ -69,9 +71,9 @@
         <div class="controls">
           <div><b>W / ↑</b> 推进</div><div><b>S / ↓</b> 减速</div>
           <div><b>A·D / ←→</b> 转向</div><div><b>空格</b> 开火</div>
-          <div><b>E</b> 停靠空间站</div><div><b>M</b> 静音</div>
+          <div><b>Q / 1·2</b> 切换武器</div><div><b>E</b> 停靠</div><div><b>M</b> 静音</div>
         </div>
-        <p class="tip-mobile">📱 手机操作：<b>左半屏拖动</b>＝飞船转向并推进（拖向哪就飞向哪），<b>右半屏按住 🔥</b>＝开火，靠近空间站自动出现 ⚓ 停靠键。</p>
+        <p class="tip-mobile">📱 手机操作：<b>左半屏拖动</b>＝转向并推进，<b>右半屏按住 🔥</b>＝开火，<b>🔫 键</b>切换主炮/散射炮，靠近空间站自动出现 ⚓ 停靠键。</p>
         <button id="startBtn" class="bigbtn">开始探险</button>
       </div>
     </div>
