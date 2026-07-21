@@ -21,6 +21,8 @@ const Game = {
   jumpCD: 0, spawnTimer: 0,
   messages: [], kills: 0,
   warehouse: { mineral: 0, energy: 0, rare: 0 },   // 空间站仓库（无限容量，跨星系保留）
+  diff: 0.6, diffBase: 0.6,            // 动态难度系数（影响敌舰伤害/射速）
+  dmgWindow: 0, killWindow: 0,         // 近期受伤/击杀（用于动态难度评估）
   audio: null, muted: false,
   last: 0,
 
@@ -193,6 +195,7 @@ const Game = {
   startGame() {
     this.systemIndex = 0; this.systemSeed = 12345; this.kills = 0;
     this.messages = [];
+    this.diff = 0.6; this.diffBase = 0.6; this.dmgWindow = 0; this.killWindow = 0;
     this.closeDiscard();
     this.player = new Player();
     this.player.invuln = 3.0;                 // 开局 3 秒无敌，降低初期压力
@@ -207,6 +210,10 @@ const Game = {
   },
 
   loadSystem(isFirst) {
+    // 按进度设定难度基线：越深星系越难；首星系刻意压低，避免开局被集火
+    this.diffBase = Utils.clamp(0.55 + this.systemIndex * 0.12, 0.5, 1.6);
+    this.diff = this.diffBase;
+    this.dmgWindow = 0; this.killWindow = 0;
     const data = WorldGen.build(this.systemSeed + this.systemIndex * 7919, isFirst);
     this.asteroids = data.asteroids;
     this.enemies = data.enemies;
@@ -238,6 +245,7 @@ const Game = {
   update(dt) {
     const p = this.player;
     if (this.joy && this.joy.id !== null) this.applyJoy();
+    this.updateDifficulty(dt);
     p.update(dt);
     this.asteroids.forEach(a => a.update(dt));
     this.enemies.forEach(e => e.update(dt));
@@ -298,6 +306,23 @@ const Game = {
     }
 
     this.updateHUD();
+  },
+
+  // —— 动态难度：根据表现平滑调节敌舰强度 ——
+  updateDifficulty(dt) {
+    if (!this.player) return;
+    // 窗口衰减：受伤窗口短（易回落），击杀窗口略长（维持压制感）
+    this.dmgWindow *= Math.pow(0.5, dt / 6);
+    this.killWindow *= Math.pow(0.5, dt / 12);
+
+    const hpFrac = this.player.hp / this.player.maxHp;
+    const lowHp = Math.min(0, hpFrac - 0.4) * 1.5;                       // 低于 40% 明显降难
+    const ease   = -(this.dmgWindow / Math.max(1, this.player.maxHp)) * 1.2; // 近期受伤 → 降难
+    const dom    = Math.min(this.killWindow, 40) * 0.05;                 // 持续击杀 → 升难（封顶防溢出）
+    const perf   = dom + lowHp + ease;
+
+    const target = Utils.clamp(this.diffBase + perf * 0.45, 0.45, 1.8);
+    this.diff += (target - this.diff) * Math.min(1, dt * 0.25);          // 数秒内趋近，反馈及时
   },
 
   collisions(dt) {
@@ -400,6 +425,7 @@ const Game = {
 
   onEnemyDeath(e) {
     this.kills++;
+    this.killWindow += 1;
     this.explode(e.x, e.y, e.race.color, 18);
     this.sfx('explode');
     const n = e.race.behavior === 'tank' ? 4 : (e.race.behavior === 'trader' ? 5 : 3);
@@ -417,6 +443,9 @@ const Game = {
   onPlayerDeath() {
     this.state = 'dead';
     this.closeDiscard();
+    // 阵亡后大幅降低难度，给玩家喘息空间
+    this.diff = Math.max(0.45, this.diff - 0.35);
+    this.dmgWindow = 0; this.killWindow = 0;
     this.explode(this.player.x, this.player.y, '#ff5a5a', 40);
     this.sfx('explode');
     document.getElementById('deathStats').textContent =
@@ -610,6 +639,8 @@ const Game = {
       `货舱 ${p.totalCargo()}/${p.cargoCap}　矿物${Math.floor(p.cargo.mineral)} 能量${Math.floor(p.cargo.energy)} 稀有${Math.floor(p.cargo.rare)}　仓库${wh}`;
     document.getElementById('statKills').textContent = '击毁 ' + this.kills;
     document.getElementById('statSys').textContent = '星系 ' + (this.systemIndex + 1);
+    const dl = this.diff < 0.7 ? '低' : this.diff < 1.0 ? '中' : this.diff < 1.3 ? '高' : '极高';
+    document.getElementById('statDiff').textContent = '难度 ' + dl;
     // 日志
     const log = document.getElementById('log');
     log.innerHTML = this.messages.map(m =>

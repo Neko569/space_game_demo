@@ -121,6 +121,7 @@ class Player {
   hit(dmg) {
     if (this.invuln > 0) return;
     this.hp -= dmg;
+    if (typeof Game !== 'undefined' && Game.dmgWindow !== undefined) Game.dmgWindow += dmg;
     this.invuln = 0.6;
     Game.shake(6);
     Game.flash('#ff4d4d');
@@ -187,9 +188,12 @@ class Enemy {
     this.x = x; this.y = y;
     this.vx = 0; this.vy = 0;
     this.race = race;
+    const D = (typeof Game !== 'undefined' && Game.diff) || 1;
     this.hp = race.hp; this.maxHp = race.hp;
+    this.dmg = race.dmg * D;            // 难度越高，单发伤害越高
+    this.fireRate = race.fireRate / D;  // 难度越高，开火越频繁
     this.angle = Utils.rand(0, Math.PI * 2);
-    this.fireTimer = Utils.rand(0, race.fireRate);
+    this.fireTimer = Utils.rand(0, this.fireRate);
     this.radius = 13;
     this.dead = false;
     this.captured = false;
@@ -241,10 +245,10 @@ class Enemy {
     if (this.race.dmg > 0 && d < 520) {
       this.fireTimer -= dt;
       if (this.fireTimer <= 0) {
-        this.fireTimer = this.race.fireRate;
+        this.fireTimer = this.fireRate;
         const fx = Math.cos(toAng), fy = Math.sin(toAng);
         Game.bullets.push(new Bullet(this.x + fx * 14, this.y + fy * 14,
-          fx * 320 + this.vx * 0.3, fy * 320 + this.vy * 0.3, this.race.dmg, 'enemy', this.race.color));
+          fx * 320 + this.vx * 0.3, fy * 320 + this.vy * 0.3, this.dmg, 'enemy', this.race.color));
         Game.sfx('enemy');
       }
     }
