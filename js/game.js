@@ -3,11 +3,11 @@
  * ============================================================ */
 
 const UPGRADES = [
-  { key: 'engine', name: '引擎',     desc: '提升最高速度与推力',     cost: { mineral: 20, energy: 10 } },
-  { key: 'hull',   name: '船体装甲', desc: '提升最大生命值',         cost: { mineral: 25, rare: 5 } },
-  { key: 'weapon', name: '武器系统', desc: '提升伤害与射速',         cost: { energy: 25, rare: 8 } },
-  { key: 'cargo',  name: '货舱扩容', desc: '提升资源携带上限',       cost: { mineral: 30, energy: 15 } },
-  { key: 'fuel',   name: '燃料舱',   desc: '提升最大燃料储备',       cost: { mineral: 15, energy: 20 } },
+  { key: 'engine', name: '引擎',     desc: '提升最高速度与推力',     cost: { mineral: 15, energy: 8 } },
+  { key: 'hull',   name: '船体装甲', desc: '提升最大生命值',         cost: { mineral: 18, rare: 4 } },
+  { key: 'weapon', name: '武器系统', desc: '提升伤害与射速',         cost: { energy: 18, rare: 6 } },
+  { key: 'cargo',  name: '货舱扩容', desc: '提升资源携带上限',       cost: { mineral: 22, energy: 12 } },
+  { key: 'fuel',   name: '燃料舱',   desc: '提升最大燃料储备',       cost: { mineral: 12, energy: 14 } },
 ];
 
 const Game = {
@@ -26,12 +26,28 @@ const Game = {
   init() {
     this.canvas = document.getElementById('game');
     this.ctx = this.canvas.getContext('2d');
-    this.canvas.width = CONFIG.WIDTH; this.canvas.height = CONFIG.HEIGHT;
     Input.init();
     Sprites.build(RACES);
+    this.resize();
+    window.addEventListener('resize', () => this.resize());
+    this.setupTouch();
     this.bindUI();
     document.getElementById('startBtn').onclick = () => { this.initAudio(); this.startGame(); };
     requestAnimationFrame((t) => this.loop(t));
+  },
+
+  // 根据屏幕分辨率自适应画布（支持手机竖屏/横屏）
+  resize() {
+    const stage = document.getElementById('stage');
+    const cw = Math.max(320, stage.clientWidth || window.innerWidth);
+    const ch = Math.max(240, stage.clientHeight || window.innerHeight);
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.canvas.width = Math.round(cw * dpr);
+    this.canvas.height = Math.round(ch * dpr);
+    this.canvas.style.width = cw + 'px';
+    this.canvas.style.height = ch + 'px';
+    this.dpr = dpr;
+    CONFIG.WIDTH = cw; CONFIG.HEIGHT = ch;
   },
 
   bindUI() {
@@ -44,6 +60,32 @@ const Game = {
       if (k === 'e' && this.state === 'docked') this.closeDock();
       if (k === 'm') { this.muted = !this.muted; document.getElementById('muteBtn').textContent = this.muted ? '🔇' : '🔊'; }
     });
+  },
+
+  // 触屏控制（手机端自动显示）
+  setupTouch() {
+    const show = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || window.innerWidth < 820;
+    if (show) document.body.classList.add('touchui');
+    const bind = (id, key) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const down = (e) => { e.preventDefault(); Input.keys[key] = true; Input.pressed[key] = true; };
+      const up = (e) => { e.preventDefault(); Input.keys[key] = false; };
+      el.addEventListener('pointerdown', down);
+      el.addEventListener('pointerup', up);
+      el.addEventListener('pointercancel', up);
+      el.addEventListener('pointerleave', up);
+    };
+    bind('btnLeft', 'a');
+    bind('btnRight', 'd');
+    bind('btnThrust', 'w');
+    bind('btnFire', ' ');
+    const dock = document.getElementById('btnDock');
+    if (dock) {
+      dock.addEventListener('pointerdown', (e) => { e.preventDefault(); Input.keys['e'] = true; Input.pressed['e'] = true; });
+      dock.addEventListener('pointerup', (e) => { e.preventDefault(); Input.keys['e'] = false; });
+      dock.addEventListener('pointercancel', (e) => { e.preventDefault(); Input.keys['e'] = false; });
+    }
   },
 
   initAudio() {
@@ -122,19 +164,23 @@ const Game = {
 
     this.collisions(dt);
 
-    // 敌人刷新（维持开放世界的压力）
+    // 敌人刷新（维持开放世界的压力，节奏更缓和）
     this.spawnTimer -= dt;
-    if (this.spawnTimer <= 0 && this.enemies.length < 16) {
-      this.spawnTimer = Utils.rand(14, 22);
+    if (this.spawnTimer <= 0 && this.enemies.length < 10) {
+      this.spawnTimer = Utils.rand(22, 32);
       const ang = Utils.rand(0, Math.PI * 2);
       const ex = Utils.clamp(p.x + Math.cos(ang) * 900, 60, CONFIG.WORLD - 60);
       const ey = Utils.clamp(p.y + Math.sin(ang) * 900, 60, CONFIG.WORLD - 60);
       this.enemies.push(new Enemy(ex, ey, this.systemRace));
     }
 
-    // 相机
-    const tx = Utils.clamp(p.x - CONFIG.WIDTH / 2, 0, CONFIG.WORLD - CONFIG.WIDTH);
-    const ty = Utils.clamp(p.y - CONFIG.HEIGHT / 2, 0, CONFIG.WORLD - CONFIG.HEIGHT);
+    // 相机（视口大于世界时居中）
+    let tx = p.x - CONFIG.WIDTH / 2;
+    let ty = p.y - CONFIG.HEIGHT / 2;
+    if (CONFIG.WIDTH >= CONFIG.WORLD) tx = (CONFIG.WORLD - CONFIG.WIDTH) / 2;
+    else tx = Utils.clamp(tx, 0, CONFIG.WORLD - CONFIG.WIDTH);
+    if (CONFIG.HEIGHT >= CONFIG.WORLD) ty = (CONFIG.WORLD - CONFIG.HEIGHT) / 2;
+    else ty = Utils.clamp(ty, 0, CONFIG.WORLD - CONFIG.HEIGHT);
     this.cam.x = Utils.lerp(this.cam.x, tx, 0.12);
     this.cam.y = Utils.lerp(this.cam.y, ty, 0.12);
 
@@ -155,7 +201,9 @@ const Game = {
     const prompt = document.getElementById('prompt');
     if (nearStation) {
       prompt.style.display = 'block';
-      prompt.textContent = '按 [E] 停靠空间站（维修 / 补给 / 升级）';
+      prompt.textContent = document.body.classList.contains('touchui')
+        ? '点击 ⚓ 停靠空间站（维修 / 补给 / 升级）'
+        : '按 [E] 停靠空间站（维修 / 补给 / 升级）';
       if (Input.justPressed('e')) this.openDock();
     } else {
       prompt.style.display = 'none';
@@ -178,7 +226,7 @@ const Game = {
       if (b.life <= 0) continue;
       for (const a of this.asteroids) {
         if (Utils.dist(b.x, b.y, a.x, a.y) < a.radius + b.radius) {
-          a.amount -= 7; b.life = 0; this.hitSpark(b.x, b.y, '#ccc');
+          a.amount -= 14; b.life = 0; this.hitSpark(b.x, b.y, '#ccc');
           if (a.amount <= 0) this.breakAsteroid(a);
           break;
         }
@@ -195,7 +243,7 @@ const Game = {
     for (const a of this.asteroids) {
       const d = Utils.dist(p.x, p.y, a.x, a.y);
       if (d < p.radius + a.radius) {
-        const mined = Math.min(a.amount, 16 * dt, this.player.cargoCap - this.player.totalCargo());
+        const mined = Math.min(a.amount, 30 * dt, this.player.cargoCap - this.player.totalCargo());
         if (mined > 0) { a.amount -= mined; this.player.addResource(a.type, mined); }
         // 轻微分离，避免卡入
         const ov = (p.radius + a.radius) - d;
@@ -210,9 +258,15 @@ const Game = {
     for (const o of this.pickups) {
       if (o.taken) continue;
       if (Utils.dist(p.x, p.y, o.x, o.y) < p.radius + o.radius) {
-        const got = this.player.addResource(o.type, o.amount);
-        if (got > 0) { o.taken = true; this.sfx('pickup');
-          if (o.type === 'rare') this.msg(`获得稀有金属 ×${Math.round(got)}`); }
+        if (o.type === 'fuel') {
+          const before = this.player.fuel;
+          this.player.fuel = Math.min(this.player.maxFuel, this.player.fuel + o.amount);
+          if (this.player.fuel > before) { o.taken = true; this.sfx('pickup'); this.msg(`补充燃料 +${Math.round(this.player.fuel - before)}`); }
+        } else {
+          const got = this.player.addResource(o.type, o.amount);
+          if (got > 0) { o.taken = true; this.sfx('pickup');
+            if (o.type === 'rare') this.msg(`获得稀有金属 ×${Math.round(got)}`); }
+        }
       }
     }
     // 撞击敌舰
@@ -264,6 +318,11 @@ const Game = {
     for (let i = 0; i < n; i++) this.pickups.push(new Pickup(e.x, e.y, e.race.drop, Utils.rand(4, 9)));
     if (e.race.behavior === 'tank' && Math.random() < 0.6)
       this.pickups.push(new Pickup(e.x, e.y, 'rare', Utils.rand(5, 12)));
+    // 燃料补给（重甲/游商必掉，其余小概率）
+    if (e.race.behavior === 'tank' || e.race.behavior === 'trader')
+      this.pickups.push(new Pickup(e.x, e.y, 'fuel', Utils.rand(25, 40)));
+    else if (Math.random() < 0.25)
+      this.pickups.push(new Pickup(e.x, e.y, 'fuel', Utils.rand(15, 25)));
     this.msg(`击毁${e.race.name}战舰，掉落${CONFIG.RESOURCE_NAMES[e.race.drop]}。`);
   },
 
@@ -292,7 +351,7 @@ const Game = {
   },
   costFor(key, level) {
     const base = UPGRADES.find(u => u.key === key).cost;
-    const f = 1 + level * 0.7;
+    const f = 1 + level * 0.6;
     const out = {};
     for (const k in base) out[k] = Math.round(base[k] * f);
     return out;
@@ -374,7 +433,7 @@ const Game = {
   // —— 渲染 ——
   render() {
     const ctx = this.ctx;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(this.dpr || 1, 0, 0, this.dpr || 1, 0, 0);
     ctx.fillStyle = '#05060e';
     ctx.fillRect(0, 0, CONFIG.WIDTH, CONFIG.HEIGHT);
 

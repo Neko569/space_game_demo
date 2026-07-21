@@ -24,13 +24,13 @@ class Player {
   // —— 由升级等级派生的属性 ——
   recompute() {
     this.maxHp = 100 + this.up.hull * 40;
-    this.maxFuel = 100 + this.up.fuel * 40;
-    this.maxSpeed = 230 + this.up.engine * 50;
-    this.thrust = 360 + this.up.engine * 70;
+    this.maxFuel = 140 + this.up.fuel * 40;
+    this.maxSpeed = 240 + this.up.engine * 55;
+    this.thrust = 380 + this.up.engine * 80;
     this.turn = 3.4;
-    this.bulletDmg = 9 + this.up.weapon * 6;
-    this.fireCD = Math.max(0.12, 0.45 - this.up.weapon * 0.06);
-    this.cargoCap = 40 + this.up.cargo * 30;
+    this.bulletDmg = 10 + this.up.weapon * 7;
+    this.fireCD = Math.max(0.12, 0.4 - this.up.weapon * 0.06);
+    this.cargoCap = 50 + this.up.cargo * 30;
   }
 
   totalCargo() { return this.cargo.mineral + this.cargo.energy + this.cargo.rare; }
@@ -54,7 +54,7 @@ class Player {
     if (Input.isDown('w', 'arrowup') && this.fuel > 0) {
       this.vx += fx * this.thrust * dt;
       this.vy += fy * this.thrust * dt;
-      this.fuel = Math.max(0, this.fuel - 4 * dt);
+      this.fuel = Math.max(0, this.fuel - 2.5 * dt);
       this.thrusting = true;
     }
     if (Input.isDown('s', 'arrowdown')) { // 反向制动
@@ -133,7 +133,7 @@ class Asteroid {
     this.vx = Utils.rand(-12, 12); this.vy = Utils.rand(-12, 12);
     this.r = r;
     this.type = type;
-    this.amount = Math.round((r / 10) * Utils.rand(18, 30));
+    this.amount = Math.round((r / 10) * Utils.rand(28, 45));
     this.maxAmount = this.amount;
     this.sprite = Utils.choice(Sprites.asteroids);
     this.spin = Utils.rand(-0.4, 0.4);
@@ -220,7 +220,7 @@ class Enemy {
         this.fireTimer = this.race.fireRate;
         const fx = Math.cos(toAng), fy = Math.sin(toAng);
         Game.bullets.push(new Bullet(this.x + fx * 14, this.y + fy * 14,
-          fx * 360 + this.vx * 0.3, fy * 360 + this.vy * 0.3, this.race.dmg, 'enemy', this.race.color));
+          fx * 320 + this.vx * 0.3, fy * 320 + this.vy * 0.3, this.race.dmg, 'enemy', this.race.color));
         Game.sfx('enemy');
       }
     }
@@ -278,9 +278,9 @@ class Pickup {
     // 靠近玩家时磁吸
     const p = Game.player;
     const d = Utils.dist(this.x, this.y, p.x, p.y);
-    if (d < 140) {
+    if (d < 180) {
       const a = Utils.angleTo(this.x, this.y, p.x, p.y);
-      const pull = (1 - d / 140) * 260;
+      const pull = (1 - d / 180) * 340;
       this.vx += Math.cos(a) * pull * dt;
       this.vy += Math.sin(a) * pull * dt;
     }
@@ -290,6 +290,16 @@ class Pickup {
     this.life -= dt;
   }
   draw(ctx) {
+    if (this.type === 'fuel') {
+      ctx.save();
+      ctx.translate(this.x, this.y); ctx.rotate(this.spin);
+      ctx.fillStyle = '#6dffb0'; ctx.shadowColor = '#6dffb0'; ctx.shadowBlur = 8;
+      ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath(); ctx.arc(-1.5, -1.5, 2, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      return;
+    }
     const col = CONFIG.RESOURCE_COLORS[this.type];
     ctx.save();
     ctx.translate(this.x, this.y); ctx.rotate(this.spin);

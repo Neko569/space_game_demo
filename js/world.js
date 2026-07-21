@@ -64,7 +64,7 @@ const WorldGen = {
 
     // 敌舰（避开中心出生点）
     const enemies = [];
-    const baseCount = isFirst ? 5 : Math.round(ri(12, 20) * (0.6 + race.aggression * 0.6));
+    const baseCount = isFirst ? 3 : Math.round(ri(6, 10) * (0.7 + race.aggression * 0.4));
     for (let i = 0; i < baseCount; i++) {
       let x, y, tries = 0;
       do {
