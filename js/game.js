@@ -20,6 +20,7 @@ const Game = {
   state: 'start',                // start | playing | docked | dead
   jumpCD: 0, spawnTimer: 0,
   messages: [], kills: 0,
+  warehouse: { mineral: 0, energy: 0, rare: 0 },   // 空间站仓库（无限容量，跨星系保留）
   audio: null, muted: false,
   last: 0,
 
@@ -190,6 +191,7 @@ const Game = {
     this.player = new Player();
     this.player.invuln = 3.0;                 // 开局 3 秒无敌，降低初期压力
     this.player.cargo = { mineral: 24, energy: 14, rare: 1 }; // 起步资源，便于早期升级
+    this.warehouse = { mineral: 0, energy: 0, rare: 0 };       // 仓库清空，开始新一轮
     this.loadSystem(true);
     this.state = 'playing';
     document.getElementById('startScreen').style.display = 'none';
@@ -470,7 +472,61 @@ const Game = {
       row.querySelector('.up-btn').onclick = () => this.buyUpgrade(u.key);
       box.appendChild(row);
     }
+    this.renderWarehouse();
     this.updateHUD();
+  },
+
+  // —— 仓库：存入 / 取出 / 丢弃 ——
+  renderWarehouse() {
+    const box = document.getElementById('warehouseList');
+    if (!box) return;
+    box.innerHTML = '';
+    for (const t of CONFIG.RESOURCE_TYPES) {
+      const row = document.createElement('div');
+      row.className = 'wh-row';
+      const ship = Math.floor(this.player.cargo[t]);
+      const wh = Math.floor(this.warehouse[t]);
+      row.innerHTML = `
+        <span class="wh-name" style="color:${CONFIG.RESOURCE_COLORS[t]}">${CONFIG.RESOURCE_NAMES[t]}</span>
+        <span class="wh-amt">船 <b>${ship}</b> · 仓 <b>${wh}</b></span>
+        <span class="wh-btns">
+          <button class="wh-btn dep">存入</button>
+          <button class="wh-btn wit">取出</button>
+          <button class="wh-btn dis">丢弃</button>
+        </span>`;
+      row.querySelector('.dep').onclick = () => this.deposit(t);
+      row.querySelector('.wit').onclick = () => this.withdraw(t);
+      row.querySelector('.dis').onclick = () => this.discard(t);
+      box.appendChild(row);
+    }
+  },
+  deposit(type) {
+    const amt = this.player.cargo[type];
+    if (amt <= 0) { this.msg('货舱里没有' + CONFIG.RESOURCE_NAMES[type] + '。'); return; }
+    this.warehouse[type] += amt;
+    this.player.cargo[type] = 0;
+    this.sfx('buy');
+    this.msg(`已存入仓库：${CONFIG.RESOURCE_NAMES[type]} ×${amt}`);
+    this.renderWarehouse(); this.updateHUD();
+  },
+  withdraw(type) {
+    const room = this.player.cargoCap - this.player.totalCargo();
+    if (room <= 0) { this.msg('货舱已满，无法取出。'); return; }
+    const amt = Math.min(this.warehouse[type], room);
+    if (amt <= 0) { this.msg('仓库里没有' + CONFIG.RESOURCE_NAMES[type] + '。'); return; }
+    this.player.cargo[type] += amt;
+    this.warehouse[type] -= amt;
+    this.sfx('buy');
+    this.msg(`已从仓库取出：${CONFIG.RESOURCE_NAMES[type]} ×${amt}`);
+    this.renderWarehouse(); this.updateHUD();
+  },
+  discard(type) {
+    const amt = this.player.cargo[type];
+    if (amt <= 0) { this.msg('货舱里没有' + CONFIG.RESOURCE_NAMES[type] + '。'); return; }
+    this.player.cargo[type] = 0;
+    this.sfx('buy');
+    this.msg(`已丢弃：${CONFIG.RESOURCE_NAMES[type]} ×${amt}`);
+    this.renderWarehouse(); this.updateHUD();
   },
 
   // —— 特效 ——
@@ -500,8 +556,9 @@ const Game = {
     document.getElementById('hpText').textContent = `船体 ${Math.ceil(p.hp)}/${p.maxHp}`;
     document.getElementById('fuelFill').style.width = (p.fuel / p.maxFuel * 100) + '%';
     document.getElementById('fuelText').textContent = `燃料 ${Math.ceil(p.fuel)}/${p.maxFuel}`;
+    const wh = this.warehouse ? this.warehouse.mineral + this.warehouse.energy + this.warehouse.rare : 0;
     document.getElementById('cargoText').textContent =
-      `货舱 ${p.totalCargo()}/${p.cargoCap}　矿物${Math.floor(p.cargo.mineral)} 能量${Math.floor(p.cargo.energy)} 稀有${Math.floor(p.cargo.rare)}`;
+      `货舱 ${p.totalCargo()}/${p.cargoCap}　矿物${Math.floor(p.cargo.mineral)} 能量${Math.floor(p.cargo.energy)} 稀有${Math.floor(p.cargo.rare)}　仓库${wh}`;
     document.getElementById('statKills').textContent = '击毁 ' + this.kills;
     document.getElementById('statSys').textContent = '星系 ' + (this.systemIndex + 1);
     // 日志

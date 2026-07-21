@@ -100,6 +100,28 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 .up-row.disabled .up-btn { background: #3a4a66; color: #8ea2c0; cursor: not-allowed; }
 
+/* 仓库 */
+.wh-head { margin: 16px 0 8px; font-size: 14px; font-weight: 700; color: #cfe0ff; border-top: 1px solid #244a7a; padding-top: 12px; }
+.wh-head small { font-size: 11px; color: #8ea2c0; font-weight: 400; margin-left: 6px; }
+#warehouseList { margin-bottom: 6px; }
+.wh-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 7px 10px; margin-bottom: 6px; background: rgba(18,32,60,0.45);
+  border: 1px solid #244a7a; border-radius: 8px; font-size: 12px;
+}
+.wh-name { font-weight: 700; min-width: 34px; }
+.wh-amt { color: #b9cae6; flex: 1; }
+.wh-amt b { color: #e8f1ff; }
+.wh-btns { display: flex; gap: 6px; }
+.wh-btn {
+  padding: 5px 10px; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer;
+  border: 1px solid #2c4a7a; color: #dceaff; background: rgba(40,60,100,0.7);
+}
+.wh-btn.dep { border-color: #3fa9ff; color: #cfe7ff; }
+.wh-btn.wit { border-color: #5ad7a0; color: #cffae6; }
+.wh-btn.dis { border-color: #ff6b5a; color: #ffd0c8; }
+.wh-btn:active { filter: brightness(1.15); }
+
 /* 移动端提示 */
 .tip-mobile { display: none; text-align: center; font-size: 12px; color: #8fd0ff; margin: 12px 0 2px; line-height: 1.5; }
 body.touchui .tip-mobile { display: block; }
