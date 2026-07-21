@@ -5,7 +5,6 @@
 const UPGRADES = [
   { key: 'engine', name: '引擎',     desc: '提升最高速度与推力',     cost: { mineral: 15, energy: 8 } },
   { key: 'hull',   name: '船体装甲', desc: '提升最大生命值',         cost: { mineral: 18, rare: 4 } },
-  { key: 'weapon', name: '武器系统', desc: '提升伤害与射速',         cost: { energy: 18, rare: 6 } },
   { key: 'cargo',  name: '货舱扩容', desc: '提升资源携带上限',       cost: { mineral: 22, energy: 12 } },
   { key: 'fuel',   name: '燃料舱',   desc: '提升最大燃料储备',       cost: { mineral: 12, energy: 14 } },
   { key: 'shield', name: '护盾发生器', desc: '提升护盾能量与回充速度', cost: { mineral: 16, energy: 10 } },
@@ -67,9 +66,9 @@ const Game = {
       if (k === 'e' && this.state === 'docked') this.closeDock();
       if (k === 'x' && this.state === 'playing') { this.toggleDiscard(); return; }
       if (k === 'm') { this.muted = !this.muted; document.getElementById('muteBtn').textContent = this.muted ? '🔇' : '🔊'; }
-      if (k === 'q' && this.player) this.player.switchWeapon();
-      else if (k === '1' && this.player) this.player.selectWeapon(0);
-      else if (k === '2' && this.player) this.player.selectWeapon(1);
+      if (k === 'q' && this.player) this.player.cycleWeapon();
+      else if (k >= '1' && k <= '8' && this.player) this.player.equip(parseInt(k, 10) - 1);
+      else if (k === 'r' && this.player) this.player.reload();
     });
   },
 
@@ -156,7 +155,7 @@ const Game = {
     // 切换武器
     const wbtn = document.getElementById('btnWeapon');
     if (wbtn) {
-      wbtn.addEventListener('pointerdown', (e) => { e.preventDefault(); if (Game.player) Game.player.switchWeapon(); });
+      wbtn.addEventListener('pointerdown', (e) => { e.preventDefault(); if (Game.player) Game.player.cycleWeapon(); });
     }
 
     // 停靠：靠近空间站时显示，点按停靠
@@ -377,6 +376,9 @@ const Game = {
           const before = this.player.fuel;
           this.player.fuel = Math.min(this.player.maxFuel, this.player.fuel + o.amount);
           if (this.player.fuel > before) { o.taken = true; this.sfx('pickup'); this.msg(`补充燃料 +${Math.round(this.player.fuel - before)}`); }
+        } else if (o.type === 'weapon') {
+          o.taken = true; this.sfx('pickup');
+          this.addWeapon(o.weapon);
         } else {
           const got = this.player.addResource(o.type, o.amount);
           if (got > 0) { o.taken = true; this.sfx('pickup');
@@ -439,6 +441,14 @@ const Game = {
       this.pickups.push(new Pickup(e.x, e.y, 'fuel', Utils.rand(25, 40)));
     else if (Math.random() < 0.25)
       this.pickups.push(new Pickup(e.x, e.y, 'fuel', Utils.rand(15, 25)));
+    // 武器掉落（按敌种与难度加权）
+    const lvl = this.systemIndex + 1;
+    const dropChance = (e.race.behavior === 'tank' ? 0.9 : e.race.behavior === 'trader' ? 0.5 : 0.28)
+      + (this.diff - 0.55) * 0.2;
+    if (Math.random() < Utils.clamp(dropChance, 0.05, 0.95)) {
+      const w = WeaponGen.make(lvl, { diff: this.diff });
+      this.pickups.push(new Pickup(e.x, e.y, 'weapon', w));
+    }
     this.msg(`击毁${e.race.name}战舰，掉落${CONFIG.RESOURCE_NAMES[e.race.drop]}。`);
   },
 
@@ -513,7 +523,54 @@ const Game = {
       box.appendChild(row);
     }
     this.renderWarehouse();
+    this.renderWeapons();
     this.updateHUD();
+  },
+
+  // —— 武器背包：装备 / 丢弃 ——
+  addWeapon(w) {
+    const p = this.player;
+    if (!p.loadout) return;
+    if (p.loadout.length >= 8) {
+      // 满了：按 DPS 替换最差；若更差则忽略
+      let worst = 0;
+      for (let i = 1; i < p.loadout.length; i++) if (p.loadout[i].dps < p.loadout[worst].dps) worst = i;
+      if (w.dps <= p.loadout[worst].dps) { this.msg(`拾取 ${w.name}（更差，已忽略）`); return; }
+      this.msg(`替换 ${p.loadout[worst].name} → ${w.name}`);
+      p.loadout[worst] = w;
+    } else {
+      p.loadout.push(w);
+    }
+    if (!p.curWeapon() || w.dps > p.curWeapon().dps) p.equip(p.loadout.indexOf(w));
+    this.updateWeaponTag();
+  },
+  dropWeapon(i) {
+    const p = this.player;
+    if (p.loadout.length <= 1) { this.msg('至少保留一把武器。'); return; }
+    const dropped = p.loadout.splice(i, 1)[0];
+    if (p.equipIdx >= p.loadout.length) p.equipIdx = 0;
+    p.ammo = p.curWeapon().magSize; p.reloadTimer = 0;
+    this.msg('丢弃武器：' + dropped.name);
+    this.updateWeaponTag();
+  },
+  renderWeapons() {
+    const box = document.getElementById('weaponList');
+    if (!box) return;
+    box.innerHTML = '';
+    this.player.loadout.forEach((w, i) => {
+      const row = document.createElement('div');
+      row.className = 'wh-row' + (i === this.player.equipIdx ? ' eq' : '');
+      row.innerHTML = `
+        <span class="wh-name" style="color:${w.color}">${w.name}</span>
+        <span class="wh-amt">DPS ${Math.round(w.dps)} · ${w.magSize}发</span>
+        <span class="wh-btns">
+          <button class="wh-btn wit">装备</button>
+          <button class="wh-btn dis">丢弃</button>
+        </span>`;
+      row.querySelector('.wit').onclick = () => { this.player.equip(i); this.renderWeapons(); };
+      row.querySelector('.dis').onclick = () => { this.dropWeapon(i); this.renderWeapons(); };
+      box.appendChild(row);
+    });
   },
 
   // —— 仓库：存入 / 取出 / 丢弃 ——
@@ -655,12 +712,19 @@ const Game = {
 
   // 武器指示（HUD 文本 + 移动端切换键图标）
   updateWeaponTag() {
-    const w = this.player ? this.player.weapon : 0;
-    const name = w === 1 ? '散射炮' : '主炮';
+    const w = this.player ? this.player.curWeapon() : null;
     const el = document.getElementById('weaponText');
-    if (el) el.textContent = '武器 ' + name;
+    if (el) {
+      if (w) {
+        const ammo = this.player.ammo;
+        el.innerHTML = '🔫 <span style="color:' + w.color + '">' + w.name + '</span>'
+          + ' <span style="opacity:.75">' + Math.ceil(ammo) + '/' + w.magSize + '</span>';
+      } else {
+        el.textContent = '武器 —';
+      }
+    }
     const wb = document.getElementById('btnWeapon');
-    if (wb) wb.textContent = w === 1 ? '🔱' : '🔫';
+    if (wb) wb.textContent = '🔫';
   },
 
   // —— 渲染 ——

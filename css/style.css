@@ -111,6 +111,7 @@ body { display: flex; align-items: center; justify-content: center; }
   padding: 7px 10px; margin-bottom: 6px; background: rgba(18,32,60,0.45);
   border: 1px solid #244a7a; border-radius: 8px; font-size: 12px;
 }
+.wh-row.eq { outline: 2px solid #ffd24a; background: rgba(60,52,20,0.5); }
 .wh-name { font-weight: 700; min-width: 34px; }
 .wh-amt { color: #b9cae6; flex: 1; }
 .wh-amt b { color: #e8f1ff; }

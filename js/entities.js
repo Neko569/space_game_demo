@@ -13,12 +13,15 @@ class Player {
     this.hp = CONFIG.START_HP;
     this.fuel = CONFIG.START_FUEL;
     this.cargo = { mineral: 0, energy: 0, rare: 0 };
-    this.up = { engine: 0, hull: 0, weapon: 0, cargo: 0, fuel: 0, shield: 0 };
+    this.up = { engine: 0, hull: 0, cargo: 0, fuel: 0, shield: 0 };
     this.maxShield = 0; this.shieldRegen = 0; this.shieldRegenDelay = 3.0; this.shieldDelay = 0;
     // this.shield 在 recompute() 中于首次构建时充满
+    this.loadout = [ WeaponGen.make(1) ];   // 起始配发一把手枪
+    this.equipIdx = 0;
+    this.ammo = this.loadout[0].magSize;
+    this.reloadTimer = 0;
     this.thrusting = false;
     this.fireTimer = 0;
-    this.weapon = 0;               // 0=主炮 1=散射炮
     this.invuln = 0;               // 受击无敌帧
     this.radius = 14;
     this.recompute();
@@ -31,10 +34,7 @@ class Player {
     this.maxSpeed = 240 + this.up.engine * 55;
     this.thrust = 380 + this.up.engine * 80;
     this.turn = 3.4;
-    this.bulletDmg = 10 + this.up.weapon * 7;
-    this.fireCD = Math.max(0.12, 0.4 - this.up.weapon * 0.06);
-    this.spreadCD = Math.max(0.3, 0.78 - this.up.weapon * 0.07);   // 散射炮射击间隔
-    this.spreadCount = 3 + Math.min(2, Math.floor(this.up.weapon / 3)); // 散射弹数随武器等级增长(3~5)
+    // 武器威力来自拾取的程序化枪械（见 loadout），不再由升级决定
     this.cargoCap = 50 + this.up.cargo * 30;
     this.maxShield = 40 + this.up.shield * 25;       // 护盾能量上限
     this.shieldRegen = 9 + this.up.shield * 3;        // 每秒回充量
@@ -87,12 +87,19 @@ class Player {
     if (this.y < m) { this.y = m; this.vy = Math.abs(this.vy) * 0.4; }
     if (this.y > CONFIG.WORLD - m) { this.y = CONFIG.WORLD - m; this.vy = -Math.abs(this.vy) * 0.4; }
 
-    // 射击（不同武器使用各自冷却）
+    // 射击 + 换弹（武器属性来自装备栏）
     this.fireTimer -= dt;
-    const cd = this.weapon === 1 ? this.spreadCD : this.fireCD;
-    if (Input.isDown(' ') && this.fireTimer <= 0) {
+    const w = this.curWeapon();
+    const cd = w ? w.fireRate : 0.5;
+    if (Input.isDown(' ') && this.fireTimer <= 0 && this.reloadTimer <= 0 && this.ammo > 0) {
       this.shoot();
       this.fireTimer = cd;
+    }
+    if (this.reloadTimer > 0) {
+      this.reloadTimer -= dt;
+      if (this.reloadTimer <= 0 && w) this.ammo = w.magSize;
+    } else if (this.ammo <= 0 && w) {
+      this.reloadTimer = w.reload;   // 弹尽自动换弹
     }
     if (this.invuln > 0) this.invuln -= dt;
     // 护盾自动回充（受击后先等待 shieldRegenDelay 秒）
@@ -100,31 +107,42 @@ class Player {
     else if (this.shield < this.maxShield) this.shield = Math.min(this.maxShield, this.shield + this.shieldRegen * dt);
   }
 
-  shoot() {
-    const fx = Math.sin(this.angle), fy = -Math.cos(this.angle);
-    const bx = this.x + fx * 16, by = this.y + fy * 16;
-    if (this.weapon === 1) {
-      // 散射炮：以船头为中心呈扇形发射多发
-      const n = this.spreadCount, span = 0.52, half = span / 2;
-      for (let i = 0; i < n; i++) {
-        const off = n === 1 ? 0 : -half + span * i / (n - 1);
-        const ca = Math.cos(off), sa = Math.sin(off);
-        const rx = fx * ca - fy * sa, ry = fx * sa + fy * ca;
-        Game.bullets.push(new Bullet(bx, by, rx * 540 + this.vx, ry * 540 + this.vy, this.bulletDmg, 'player'));
-      }
-    } else {
-      Game.bullets.push(new Bullet(bx, by, fx * 560 + this.vx, fy * 560 + this.vy, this.bulletDmg, 'player'));
-    }
-    Game.sfx('shoot');
+  // 当前装备的武器
+  curWeapon() { return this.loadout.length ? this.loadout[this.equipIdx] : null; }
+
+  equip(idx) {
+    if (idx < 0 || idx >= this.loadout.length || idx === this.equipIdx) return;
+    this.equipIdx = idx;
+    this.reloadTimer = 0;
+    this.ammo = this.loadout[idx].magSize;
+    if (typeof Game !== 'undefined') { Game.sfx('buy'); Game.updateWeaponTag(); }
+  }
+  cycleWeapon() {
+    if (this.loadout.length > 1) this.equip((this.equipIdx + 1) % this.loadout.length);
+  }
+  reload() {
+    const w = this.curWeapon();
+    if (w && this.ammo < w.magSize && this.reloadTimer <= 0) this.reloadTimer = w.reload;
   }
 
-  switchWeapon() { this.selectWeapon(this.weapon === 0 ? 1 : 0); }
-  selectWeapon(w) {
-    if (this.weapon === w) return;
-    this.weapon = w;
-    Game.sfx('buy');
-    Game.msg('切换武器：' + (w === 0 ? '主炮' : '散射炮'));
-    Game.updateWeaponTag();
+  shoot() {
+    const w = this.curWeapon();
+    if (!w) return;
+    const fx = Math.sin(this.angle), fy = -Math.cos(this.angle);
+    const bx = this.x + fx * 16, by = this.y + fy * 16;
+    const n = w.projectiles, span = w.spread, half = span / 2;
+    for (let i = 0; i < n; i++) {
+      const off = n === 1 ? (Utils.rand(-span, span) * 0.5)
+        : -half + span * i / (n - 1) + Utils.rand(-0.02, 0.02);
+      const ca = Math.cos(off), sa = Math.sin(off);
+      const rx = fx * ca - fy * sa, ry = fx * sa + fy * ca;
+      const b = new Bullet(bx, by, rx * w.bulletSpeed + this.vx, ry * w.bulletSpeed + this.vy,
+        w.bulletDmg, 'player', w.color, w.element);
+      Game.bullets.push(b);
+    }
+    this.ammo--;
+    if (this.ammo <= 0) this.reloadTimer = w.reload;
+    Game.sfx('shoot');
   }
 
   hit(dmg) {
@@ -297,10 +315,11 @@ class Enemy {
 }
 
 class Bullet {
-  constructor(x, y, vx, vy, dmg, owner, color) {
+  constructor(x, y, vx, vy, dmg, owner, color, element) {
     this.x = x; this.y = y; this.vx = vx; this.vy = vy;
     this.dmg = dmg; this.owner = owner;
     this.color = color || (owner === 'player' ? '#9be7ff' : '#ff7a6b');
+    this.element = element || 'none';
     this.life = 1.6; this.radius = 3;
   }
   update(dt) {
@@ -324,6 +343,7 @@ class Pickup {
     this.x = x; this.y = y;
     this.vx = Utils.rand(-30, 30); this.vy = Utils.rand(-30, 30);
     this.type = type; this.amount = amount;
+    this.weapon = (type === 'weapon') ? amount : null;
     this.life = 22; this.radius = 9;
     this.spin = Utils.rand(0, Math.PI * 2);
   }
@@ -343,6 +363,21 @@ class Pickup {
     this.life -= dt;
   }
   draw(ctx) {
+    if (this.type === 'weapon' && this.weapon) {
+      const col = this.weapon.color;
+      ctx.save();
+      ctx.translate(this.x, this.y); ctx.rotate(this.spin);
+      ctx.shadowColor = col; ctx.shadowBlur = 12;
+      ctx.fillStyle = col;
+      ctx.fillRect(-7, -5, 14, 10);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(8,8,14,0.85)';
+      ctx.strokeRect(-7, -5, 14, 10);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillRect(-3, -2, 6, 4);
+      ctx.restore();
+      return;
+    }
     if (this.type === 'fuel') {
       ctx.save();
       ctx.translate(this.x, this.y); ctx.rotate(this.spin);
