@@ -35,7 +35,7 @@ const Game = {
     window.addEventListener('resize', () => this.resize());
     this.setupTouch();
     this.bindUI();
-    document.getElementById('startBtn').onclick = () => { this.initAudio(); this.startGame(); };
+    document.getElementById('startBtn').onclick = () => { this.initAudio(); this.startGame(this.selectedClass || 'ranger'); };
     requestAnimationFrame((t) => this.loop(t));
   },
 
@@ -60,11 +60,24 @@ const Game = {
     document.getElementById('discardBtn').onclick = () => this.toggleDiscard();
     document.getElementById('closeDiscardBtn').onclick = () => this.closeDiscard();
     document.getElementById('discardAllBtn').onclick = () => this.dumpAll();
+    document.getElementById('closeSkillBtn').onclick = () => this.closeSkills();
+    this.selectedClass = 'ranger';
+    this.renderClassCards();
+    // 触屏技能键
+    const sbtn = document.getElementById('btnSkill');
+    if (sbtn) sbtn.addEventListener('pointerdown', (e) => { e.preventDefault(); if (Game.player && Game.state === 'playing') triggerActive(Game.player); });
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
-      if (k === 'escape') { if (document.getElementById('discardPanel').style.display === 'block') this.closeDiscard(); else if (this.state === 'docked') this.closeDock(); return; }
+      if (k === 'escape') {
+        if (document.getElementById('skillPanel').style.display === 'flex') { this.closeSkills(); return; }
+        if (document.getElementById('discardPanel').style.display === 'block') { this.closeDiscard(); return; }
+        if (this.state === 'docked') this.closeDock();
+        return;
+      }
       if (k === 'e' && this.state === 'docked') this.closeDock();
       if (k === 'x' && this.state === 'playing') { this.toggleDiscard(); return; }
+      if (k === 't' && (this.state === 'playing' || this.state === 'docked')) { this.toggleSkills(); return; }
+      if (k === 'f' && this.player && this.state === 'playing') { triggerActive(this.player); }
       if (k === 'm') { this.muted = !this.muted; document.getElementById('muteBtn').textContent = this.muted ? '🔇' : '🔊'; }
       if (k === 'q' && this.player) this.player.cycleWeapon();
       else if (k >= '1' && k <= '8' && this.player) this.player.equip(parseInt(k, 10) - 1);
@@ -72,7 +85,25 @@ const Game = {
     });
   },
 
-  // 虚拟摇杆 + 开火（手机端自动启用）
+  // 职业选择卡片
+  renderClassCards() {
+    const box = document.getElementById('classCards');
+    if (!box) return;
+    box.innerHTML = '';
+    for (const c of CLASSES) {
+      const sel = c.id === this.selectedClass;
+      const card = document.createElement('div');
+      card.className = 'class-card' + (sel ? ' sel' : '');
+      card.style.borderColor = sel ? c.color : '#2c4a7a';
+      card.innerHTML = `
+        <div class="cc-icon" style="color:${c.color}">${c.icon}</div>
+        <div class="cc-info"><b style="color:${c.color}">${c.name}</b><br>
+        <small>${c.desc}</small></div>`;
+      card.onclick = () => { this.selectedClass = c.id; this.renderClassCards(); };
+      box.appendChild(card);
+    }
+  },
+
   setupTouch() {
     const show = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || window.innerWidth < 820;
     if (show) document.body.classList.add('touchui');
@@ -192,12 +223,17 @@ const Game = {
     else if (t === 'buy') this.beep(700, 0.1, 'square', 0.03);
   },
 
-  startGame() {
+  startGame(classId) {
     this.systemIndex = 0; this.systemSeed = 12345; this.kills = 0;
     this.messages = [];
     this.diff = 0.6; this.diffBase = 0.6; this.dmgWindow = 0; this.killWindow = 0;
     this.closeDiscard();
+    this.closeSkills();
     this.player = new Player();
+    if (classId) this.player.classId = classId;
+    this.player.recompute();
+    this.player.hp = this.player.maxHp;
+    this.player.shield = this.player.maxShield;
     this.player.invuln = 3.0;                 // 开局 3 秒无敌，降低初期压力
     this.player.cargo = { mineral: 24, energy: 14, rare: 1 }; // 起步资源，便于早期升级
     this.warehouse = { mineral: 0, energy: 0, rare: 0 };       // 仓库清空，开始新一轮
@@ -206,7 +242,8 @@ const Game = {
     document.getElementById('startScreen').style.display = 'none';
     document.getElementById('deathPanel').style.display = 'none';
     document.getElementById('dockPanel').style.display = 'none';
-    this.msg('欢迎来到深空，指挥官。采集资源、升级飞船，穿越虫洞探索未知星系。');
+    const cls = CLASS_BY_ID[this.player.classId];
+    this.msg('欢迎来到深空，指挥官。职业：' + (cls ? cls.name : '游侠') + '。采集、升级、爆装备！');
   },
 
   loadSystem(isFirst) {
@@ -431,6 +468,9 @@ const Game = {
   onEnemyDeath(e) {
     this.kills++;
     this.killWindow += 1;
+    // 经验奖励（按敌种）
+    const xpGain = e.race.behavior === 'tank' ? 40 : e.race.behavior === 'trader' ? 25 : 15;
+    this.addXP(xpGain);
     this.explode(e.x, e.y, e.race.color, 18);
     this.sfx('explode');
     const n = e.race.behavior === 'tank' ? 4 : (e.race.behavior === 'trader' ? 5 : 3);
@@ -470,6 +510,78 @@ const Game = {
     document.getElementById('deathPanel').style.display = 'flex';
   },
 
+  // —— 经验 / 升级 / 技能 ——
+  addXP(amt) {
+    const p = this.player;
+    p.xp += amt;
+    let need = xpForLevel(p.level);
+    while (p.xp >= need) {
+      p.xp -= need;
+      p.level++;
+      p.skillPoints++;
+      this.msg(`升级！Lv.${p.level}（获得 1 技能点，按 [T] 分配）`);
+      this.sfx('buy');
+      need = xpForLevel(p.level);
+    }
+  },
+  spendSkill(nodeId) {
+    const p = this.player;
+    const cls = CLASS_BY_ID[p.classId];
+    if (!cls) return;
+    // 查找节点
+    let node = null;
+    for (const tree of cls.trees) {
+      const f = tree.nodes.find(n => n.id === nodeId);
+      if (f) { node = f; break; }
+    }
+    if (!node) return;
+    if (p.spentPoints[nodeId]) { this.msg('已学习该技能。'); return; }
+    if (p.skillPoints < node.cost) { this.msg('技能点不足。'); return; }
+    if (node.req && !p.spentPoints[node.req]) { this.msg('需先学习前置技能。'); return; }
+    p.spentPoints[nodeId] = true;
+    p.skillPoints -= node.cost;
+    p.recompute();
+    p.hp = p.maxHp; p.shield = p.maxShield;
+    this.msg(`学习技能：${node.name}`);
+    this.renderSkills();
+  },
+  renderSkills() {
+    const box = document.getElementById('skillList');
+    if (!box) return;
+    const p = this.player;
+    const cls = CLASS_BY_ID[p.classId];
+    if (!cls) return;
+    box.innerHTML = '';
+    document.getElementById('skillPoints').textContent = `技能点：${p.skillPoints}`;
+    for (const tree of cls.trees) {
+      const th = document.createElement('div');
+      th.className = 'skill-tree-head';
+      th.textContent = tree.name;
+      box.appendChild(th);
+      for (const node of tree.nodes) {
+        const learned = !!p.spentPoints[node.id];
+        const canLearn = !learned && p.skillPoints >= node.cost && (!node.req || p.spentPoints[node.req]);
+        const row = document.createElement('div');
+        row.className = 'skill-node' + (learned ? ' learned' : (canLearn ? '' : ' locked'));
+        row.innerHTML = `<b>${node.name}</b> <small>${node.desc}</small> <span class="cost">${node.cost}点</span>`;
+        if (canLearn) row.onclick = () => this.spendSkill(node.id);
+        box.appendChild(row);
+      }
+    }
+  },
+  openSkills() {
+    if (this.state !== 'playing' && this.state !== 'docked') return;
+    this.renderSkills();
+    document.getElementById('skillPanel').style.display = 'flex';
+  },
+  closeSkills() {
+    document.getElementById('skillPanel').style.display = 'none';
+  },
+  toggleSkills() {
+    const el = document.getElementById('skillPanel');
+    if (el.style.display === 'flex') this.closeSkills();
+    else this.openSkills();
+  },
   // —— 空间站 / 升级 ——
   openDock() {
     this.state = 'docked';
@@ -708,6 +820,22 @@ const Game = {
     document.getElementById('statSys').textContent = '星系 ' + (this.systemIndex + 1);
     const dl = this.diff < 0.7 ? '低' : this.diff < 1.0 ? '中' : this.diff < 1.3 ? '高' : '极高';
     document.getElementById('statDiff').textContent = '难度 ' + dl;
+    // 经验 / 等级 / 技能
+    const need = xpForLevel(p.level);
+    document.getElementById('xpFill').style.width = (p.xp / need * 100) + '%';
+    document.getElementById('levelText').textContent = `Lv.${p.level} ${Math.floor(p.xp)}/${need}`;
+    const spEl = document.getElementById('skillPts');
+    if (spEl) {
+      spEl.textContent = p.skillPoints > 0 ? `技能点 ${p.skillPoints} (T)` : '';
+      spEl.style.display = p.skillPoints > 0 ? 'inline-block' : 'none';
+    }
+    const aBtn = document.getElementById('btnSkill');
+    if (aBtn) {
+      const cls = CLASS_BY_ID[p.classId];
+      const ready = p.activeCd <= 0;
+      aBtn.textContent = cls ? cls.icon : '✦';
+      aBtn.style.opacity = ready ? '1' : '0.4';
+    }
     // 日志
     const log = document.getElementById('log');
     log.innerHTML = this.messages.map(m =>

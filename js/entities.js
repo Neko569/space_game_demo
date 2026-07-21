@@ -24,6 +24,15 @@ class Player {
     this.fireTimer = 0;
     this.invuln = 0;               // 受击无敌帧
     this.radius = 14;
+    // 职业 / 等级 / 技能
+    this.classId = 'ranger';
+    this.level = 1;
+    this.xp = 0;
+    this.skillPoints = 0;
+    this.spentPoints = {};
+    this.activeCd = 0;
+    this.droneT = 0;       // 维修无人机剩余
+    this.overloadT = 0;    // 元素过载剩余
     this.recompute();
   }
 
@@ -39,6 +48,16 @@ class Player {
     this.maxShield = 40 + this.up.shield * 25;       // 护盾能量上限
     this.shieldRegen = 9 + this.up.shield * 3;        // 每秒回充量
     this.shieldRegenDelay = 3.0;                       // 受击后延迟回充时间
+    // 职业：被动 + 技能树叠加（重算前重置临时乘数）
+    this._magMul = 1; this._reloadMul = 1; this._dmgMul = 1;
+    this._elementMul = 1; this._dotMul = 1; this._cdMul = 1;
+    const cls = CLASS_BY_ID[this.classId];
+    if (cls) {
+      if (cls.passive.shieldRegenMul) this.shieldRegen *= cls.passive.shieldRegenMul;
+      if (cls.passive.magMul) this._magMul *= cls.passive.magMul;
+      if (cls.passive.elementMul) this._elementMul *= cls.passive.elementMul;
+    }
+    if (typeof applySkills === 'function') applySkills(this);
     if (this.shield === undefined) this.shield = this.maxShield;
   }
 
@@ -105,6 +124,10 @@ class Player {
     // 护盾自动回充（受击后先等待 shieldRegenDelay 秒）
     if (this.shieldDelay > 0) this.shieldDelay -= dt;
     else if (this.shield < this.maxShield) this.shield = Math.min(this.maxShield, this.shield + this.shieldRegen * dt);
+    // 主动技能 CD / 持续效果
+    if (this.activeCd > 0) this.activeCd -= dt;
+    if (this.droneT > 0) { this.droneT -= dt; this.hp = Math.min(this.maxHp, this.hp + 18 * dt); }
+    if (this.overloadT > 0) this.overloadT -= dt;
   }
 
   // 当前装备的武器
@@ -131,17 +154,28 @@ class Player {
     const fx = Math.sin(this.angle), fy = -Math.cos(this.angle);
     const bx = this.x + fx * 16, by = this.y + fy * 16;
     const n = w.projectiles, span = w.spread, half = span / 2;
+    const dmgMul = this._dmgMul || 1;
+    const elMul = (this._elementMul || 1);
     for (let i = 0; i < n; i++) {
       const off = n === 1 ? (Utils.rand(-span, span) * 0.5)
         : -half + span * i / (n - 1) + Utils.rand(-0.02, 0.02);
       const ca = Math.cos(off), sa = Math.sin(off);
       const rx = fx * ca - fy * sa, ry = fx * sa + fy * ca;
+      let dmg = w.bulletDmg * dmgMul;
+      let el = w.element;
+      // 元素过载：随机附加元素
+      if (this.overloadT > 0) {
+        el = Utils.choice(['fire', 'shock', 'corrosive', 'cryo']);
+        dmg *= elMul;
+      } else if (el !== 'none') {
+        dmg *= elMul;
+      }
       const b = new Bullet(bx, by, rx * w.bulletSpeed + this.vx, ry * w.bulletSpeed + this.vy,
-        w.bulletDmg, 'player', w.color, w.element);
+        dmg, 'player', w.color, el);
       Game.bullets.push(b);
     }
     this.ammo--;
-    if (this.ammo <= 0) this.reloadTimer = w.reload;
+    if (this.ammo <= 0) this.reloadTimer = w.reload * (this._reloadMul || 1);
     Game.sfx('shoot');
   }
 

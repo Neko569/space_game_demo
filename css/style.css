@@ -40,6 +40,7 @@ body { display: flex; align-items: center; justify-content: center; }
 .fill { height: 100%; transition: width 0.15s; }
 .fill.hp { background: linear-gradient(90deg, #ff5a5a, #ff9b6b); }
 .fill.shield { background: linear-gradient(90deg, #2ad6c8, #5ad7ff); }
+.fill.xp { background: linear-gradient(90deg, #ffd24a, #ff9b2f); }
 .fill.fuel { background: linear-gradient(90deg, #3fa9ff, #5ad7ff); }
 .bar-text { font-size: 10px; color: #b9cae6; width: 64px; text-align: right; }
 .cargo { font-size: 11px; color: #c9d6ee; margin-top: 2px; background: rgba(10,18,34,0.6); padding: 3px 6px; border-radius: 5px; display: inline-block; }
@@ -214,3 +215,35 @@ body.touchui #stage { touch-action: none; }
   #vitals { top: 40px; width: 200px; }
   #log { display: none; }
 }
+
+/* —— 职业选择卡片 —— */
+.class-select { margin: 14px 0; }
+#classCards { display: flex; gap: 10px; }
+.class-card {
+  flex: 1; display: flex; align-items: center; gap: 8px; padding: 10px;
+  border: 2px solid #2c4a7a; border-radius: 10px; cursor: pointer;
+  background: rgba(18,32,60,0.5); transition: filter 0.1s;
+}
+.class-card:hover { filter: brightness(1.15); }
+.class-card.sel { background: rgba(40,36,18,0.55); }
+.cc-icon { font-size: 26px; }
+.cc-info { font-size: 12px; line-height: 1.4; color: #c2d0e8; }
+
+/* —— 技能树 —— */
+.skill-tree-head { font-weight: 700; color: #8fd0ff; margin: 12px 0 6px; border-bottom: 1px solid #2c4a7a; padding-bottom: 3px; }
+.skill-node {
+  padding: 8px 10px; margin-bottom: 5px; background: rgba(18,32,60,0.5);
+  border: 1px solid #2c4a7a; border-radius: 7px; font-size: 12px; cursor: pointer;
+}
+.skill-node.learned { border-color: #ffd24a; background: rgba(60,52,20,0.5); cursor: default; }
+.skill-node.locked { opacity: 0.45; cursor: not-allowed; }
+.skill-node:hover:not(.learned):not(.locked) { filter: brightness(1.2); }
+.skill-node .cost { float: right; color: #ffd24a; font-weight: 700; }
+
+/* —— 触屏技能键 —— */
+#btnSkill {
+  position: absolute; right: 112px; bottom: 26px; width: 62px; height: 56px;
+  font-size: 26px; border-radius: 14px; border: 2px solid #0a0a12; outline: 1px solid #c07bff;
+  background: rgba(80,40,120,0.75); color: #fff; z-index: 15; display: none;
+}
+body.touchui #btnSkill { display: block; }

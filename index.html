@@ -41,8 +41,14 @@
         <div class="bar"><div id="fuelFill" class="fill fuel"></div></div>
         <span id="fuelText" class="bar-text">100/100</span>
       </div>
+      <div class="bar-row">
+        <span class="bar-label">经验</span>
+        <div class="bar"><div id="xpFill" class="fill xp"></div></div>
+        <span id="levelText" class="bar-text">Lv.1</span>
+      </div>
       <div id="cargoText" class="cargo">货舱 0/40</div>
-      <div id="weaponText" class="cargo">武器 主炮</div>
+      <div id="weaponText" class="cargo">武器 —</div>
+      <span id="skillPts" class="cargo" style="display:none;color:#ffd24a"></span>
     </div>
 
     <!-- 小地图 -->
@@ -77,8 +83,19 @@
     <div id="touchControls">
       <div id="joyBase"><div id="joyKnob"></div></div>
       <button id="btnWeapon" aria-label="切换武器">🔫</button>
+      <button id="btnSkill" aria-label="技能">✦</button>
       <button id="btnFire" aria-label="开火">🔥</button>
       <button id="btnDock" aria-label="停靠">⚓</button>
+    </div>
+
+    <!-- 技能树面板 -->
+    <div id="skillPanel" class="overlay" style="display:none">
+      <div class="panel dock">
+        <h2>🌟 技能树</h2>
+        <p class="muted" id="skillPoints">技能点：0</p>
+        <div id="skillList"></div>
+        <button id="closeSkillBtn" class="bigbtn ghost">关闭 (T / Esc)</button>
+      </div>
     </div>
 
     <!-- 开始界面 -->
@@ -87,15 +104,20 @@
         <h1>星 渊 探 险</h1>
         <p class="subtitle">STAR ABYSS · 开放宇宙资源探险</p>
         <div class="brief">
-          <p>驾驶你的联邦侦察舰深入未知星域。在开放世界中<b>采集资源</b>、<b>升级飞船</b>，
-          借由<b>虫洞</b>跃迁至其它星系。途中你将遭遇各具特色的<b>星际种族</b>——小心虫族的群涌、晶灵的远程压制、铁卫的钢铁洪流，亦可追捕游商缴获稀有金属。</p>
+          <p>驾驶你的联邦侦察舰深入未知星域。在开放世界中<b>采集资源</b>、<b>爆装备</b>、<b>升级技能</b>，
+          借由<b>虫洞</b>跃迁至其它星系。途中你将遭遇各具特色的<b>星际种族</b>——用程序化枪械与元素伤害痛击它们。</p>
+        </div>
+        <div class="class-select">
+          <p class="muted">选择职业：</p>
+          <div id="classCards"></div>
         </div>
         <div class="controls">
           <div><b>W / ↑</b> 推进</div><div><b>S / ↓</b> 减速</div>
           <div><b>A·D / ←→</b> 转向</div><div><b>空格</b> 开火</div>
-          <div><b>Q / 1·2</b> 切换武器</div><div><b>E</b> 停靠</div><div><b>M</b> 静音</div>
+          <div><b>Q / 1-8</b> 切换武器</div><div><b>R</b> 换弹</div>
+          <div><b>F</b> 技能</div><div><b>T</b> 技能树</div><div><b>E</b> 停靠</div>
         </div>
-        <p class="tip-mobile">📱 手机操作：<b>左半屏拖动</b>＝转向并推进，<b>右半屏按住 🔥</b>＝开火，<b>🔫 键</b>切换主炮/散射炮，靠近空间站自动出现 ⚓ 停靠键。</p>
+        <p class="tip-mobile">📱 手机：左半屏拖动转向推进，右半屏 🔥开火 / 🔫换枪 / ✦技能 / ⚓停靠。</p>
         <button id="startBtn" class="bigbtn">开始探险</button>
       </div>
     </div>
@@ -129,6 +151,7 @@
   <script src="js/sprites.js"></script>
   <script src="js/races.js"></script>
   <script src="js/weapons.js"></script>
+  <script src="js/classes.js"></script>
   <script src="js/entities.js"></script>
   <script src="js/world.js"></script>
   <script src="js/game.js"></script>
