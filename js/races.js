@@ -19,6 +19,7 @@ const RACES = [
     behavior: 'swarm',
     hp: 12, speed: 1.45, dmg: 3, fireRate: 0.45, drop: 'energy',
     aggression: 0.8,
+    elementMods: { fire: 1.3, cryo: 0.9 },
     desc: '群居掠食者。单体脆弱、移动极快，靠数量骚扰而非硬刚。',
   },
   {
@@ -27,6 +28,7 @@ const RACES = [
     behavior: 'kite',
     hp: 22, speed: 1.1, dmg: 8, fireRate: 0.85, drop: 'energy',
     aggression: 0.45,
+    elementMods: { shock: 1.35, cryo: 0.8 },
     desc: '纯能量生命体。护盾厚重、远程压制强，擅长风筝走位。',
   },
   {
@@ -35,6 +37,7 @@ const RACES = [
     behavior: 'tank',
     hp: 46, speed: 0.75, dmg: 9, fireRate: 1.0, drop: 'rare',
     aggression: 0.45,
+    elementMods: { fire: 0.7, corrosive: 1.4 },
     desc: '远古战争机械。皮糙肉厚、火力凶猛，但转身笨重、速度迟缓。',
   },
   {
@@ -43,6 +46,7 @@ const RACES = [
     behavior: 'trader',
     hp: 32, speed: 1.25, dmg: 0, fireRate: 0, drop: 'rare',
     aggression: 0,
+    elementMods: {},
     desc: '中立游商。见到你就逃，追上可缴获大量稀有资源，从不主动攻击。',
   },
 ];

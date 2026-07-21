@@ -29,13 +29,14 @@ const WeaponGen = {
     return 'common';
   },
 
-  // 抽取元素（越稀有越可能有元素；弗拉德厂商偏爱元素）
-  rollElement(rarityId, man) {
+  // 抽取元素（越稀有越可能有元素；弗拉德厂商偏爱元素；opts.force 可强制偏好）
+  rollElement(rarityId, man, force) {
+    if (force && Math.random() < 0.6) return force;   // 60% 概率落到偏好元素
     const idx = CONFIG.RARITIES.findIndex(r => r.id === rarityId);
     const noneW = Utils.clamp(0.42 - idx * 0.06, 0.12, 0.5);
     const elems = ['none', 'fire', 'shock', 'corrosive', 'cryo'];
     const w = elems.map(e => e === 'none' ? noneW
-      : (1 - noneW) / 4 * (man.bias === 'elemental' ? 1.7 : 1));
+      : (1 - noneW) / 4 * (man.bias === 'elemental' ? 1.7 : 1) * (e === force ? 2.2 : 1));
     const total = w.reduce((a, b) => a + b, 0);
     let x = Math.random() * total;
     for (let i = 0; i < elems.length; i++) { x -= w[i]; if (x <= 0) return elems[i]; }
@@ -56,7 +57,7 @@ const WeaponGen = {
     const base = Utils.choice(WEAPON_BASES);
     const man = Utils.choice(CONFIG.MANUFACTURERS);
     const rarityId = this.rollRarity(level, opts.diff);
-    const element = this.rollElement(rarityId, man);
+    const element = this.rollElement(rarityId, man, opts.element);
     const rar = CONFIG.RARITIES.find(r => r.id === rarityId);
     const lvl = Math.max(1, level || 1);
     const lscale = 1 + (lvl - 1) * 0.12;

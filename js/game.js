@@ -334,7 +334,8 @@ const Game = {
       for (const e of this.enemies) {
         if (e.dead) continue;
         if (Utils.dist(b.x, b.y, e.x, e.y) < e.radius + b.radius) {
-          e.hit(b.dmg); b.life = 0; this.hitSpark(b.x, b.y, '#fff'); break;
+          e.hit(b.dmg, b.element); b.life = 0;
+          this.hitSpark(b.x, b.y, b.color || '#fff'); break;
         }
       }
       if (b.life <= 0) continue;
@@ -441,12 +442,16 @@ const Game = {
       this.pickups.push(new Pickup(e.x, e.y, 'fuel', Utils.rand(25, 40)));
     else if (Math.random() < 0.25)
       this.pickups.push(new Pickup(e.x, e.y, 'fuel', Utils.rand(15, 25)));
-    // 武器掉落（按敌种与难度加权）
+    // 武器掉落（按敌种与难度加权，元素偏被击杀种族的弱点/特色）
     const lvl = this.systemIndex + 1;
     const dropChance = (e.race.behavior === 'tank' ? 0.9 : e.race.behavior === 'trader' ? 0.5 : 0.28)
       + (this.diff - 0.55) * 0.2;
     if (Math.random() < Utils.clamp(dropChance, 0.05, 0.95)) {
-      const w = WeaponGen.make(lvl, { diff: this.diff });
+      // 由种族弱点决定偏好元素：虫族弱火、晶灵弱电、铁卫弱腐蚀
+      const prefEl = e.race.elementMods
+        ? Object.keys(e.race.elementMods).find(k => e.race.elementMods[k] > 1) || null
+        : null;
+      const w = WeaponGen.make(lvl, { diff: this.diff, element: prefEl });
       this.pickups.push(new Pickup(e.x, e.y, 'weapon', w));
     }
     this.msg(`击毁${e.race.name}战舰，掉落${CONFIG.RESOURCE_NAMES[e.race.drop]}。`);

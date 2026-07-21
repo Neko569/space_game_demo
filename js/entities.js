@@ -233,15 +233,30 @@ class Enemy {
     this.radius = 13;
     this.dead = false;
     this.captured = false;
+    this.dots = [];        // 活动持续伤害效果 {dmg, t, element}
+    this.slowT = 0;        // 冰冻减速剩余时间
   }
 
   update(dt) {
+    // 元素 DoT 结算
+    if (this.dots.length) {
+      for (let i = this.dots.length - 1; i >= 0; i--) {
+        const dot = this.dots[i];
+        this.hp -= dot.dmg * dt;
+        dot.t -= dt;
+        if (dot.t <= 0) this.dots.splice(i, 1);
+      }
+      if (this.hp <= 0 && !this.dead) { this.dead = true; Game.onEnemyDeath(this); return; }
+    }
+    if (this.slowT > 0) this.slowT -= dt;
+    const slowMul = this.slowT > 0 ? (1 - CONFIG.ELEMENTS.cryo.slow) : 1;
+
     const p = Game.player;
     const d = Utils.dist(this.x, this.y, p.x, p.y);
     const toAng = Utils.angleTo(this.x, this.y, p.x, p.y);
-    const maxSp = 150 * this.race.speed;
+    const maxSp = 150 * this.race.speed * slowMul;
     let desired = toAng;     // 期望朝向
-    let accel = 240 * this.race.speed;
+    let accel = 240 * this.race.speed * slowMul;
 
     switch (this.race.behavior) {
       case 'swarm':
@@ -293,8 +308,29 @@ class Enemy {
     }
   }
 
-  hit(dmg) {
-    this.hp -= dmg;
+  hit(dmg, element, chain) {
+    element = element || 'none';
+    const mods = this.race.elementMods || {};
+    const mod = mods[element] !== undefined ? mods[element] : 1;
+    let real = dmg * mod;
+    // 电击对护盾加成（敌人无护盾，转为小幅连锁：对附近同族造成衰减伤害，仅跳一次）
+    if (element === 'shock' && mod >= 1 && !chain) {
+      let near = null, nd = 90;
+      for (const e of Game.enemies) {
+        if (e === this || e.dead) continue;
+        const dd = Utils.dist(this.x, this.y, e.x, e.y);
+        if (dd < nd) { nd = dd; near = e; }
+      }
+      if (near) near.hit(dmg * 0.3, 'shock', true);
+    }
+    this.hp -= real;
+    // 火/腐蚀附加 DoT
+    const E = CONFIG.ELEMENTS[element];
+    if (E && E.dot > 0 && E.dotTime > 0) {
+      this.dots.push({ dmg: E.dot * mod, t: E.dotTime, element });
+    }
+    // 冰冻减速
+    if (element === 'cryo') this.slowT = 2.5;
     if (this.hp <= 0 && !this.dead) {
       this.dead = true;
       Game.onEnemyDeath(this);
