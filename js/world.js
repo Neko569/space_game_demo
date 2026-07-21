@@ -32,8 +32,8 @@ const WorldGen = {
     const ri = (a, b) => Math.floor(cr() * (b - a + 1)) + a;
     const rf = (a, b) => cr() * (b - a) + a;
 
-    // 主导种族
-    const race = isFirst ? RACE_BY_ID.zar : Utils.choice(HOSTILE_RACES);
+    // 主导种族：首星系为"母港附近"，安排友好的游商族（不主动攻击、见到就逃、追上可缴获资源）
+    const race = isFirst ? RACE_BY_ID.nomad : Utils.choice(HOSTILE_RACES);
     const name = this.genName(rng) + (isFirst ? '（母港附近）' : '');
 
     // 星空背景

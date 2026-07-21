@@ -241,8 +241,11 @@ class Enemy {
     // 朝向玩家（用于绘制）
     this.angle = toAng + Math.PI / 2;
 
-    // 开火
-    if (this.race.dmg > 0 && d < 520) {
+    // 开火（仅在玩家视野内才会射击，避免"视野外被打"）
+    const cam = Game.cam;
+    const onScreen = this.x > cam.x - 30 && this.x < cam.x + CONFIG.WIDTH + 30 &&
+                     this.y > cam.y - 30 && this.y < cam.y + CONFIG.HEIGHT + 30;
+    if (this.race.dmg > 0 && d < 520 && onScreen) {
       this.fireTimer -= dt;
       if (this.fireTimer <= 0) {
         this.fireTimer = this.fireRate;
