@@ -13,7 +13,9 @@ class Player {
     this.hp = CONFIG.START_HP;
     this.fuel = CONFIG.START_FUEL;
     this.cargo = { mineral: 0, energy: 0, rare: 0 };
-    this.up = { engine: 0, hull: 0, weapon: 0, cargo: 0, fuel: 0 };
+    this.up = { engine: 0, hull: 0, weapon: 0, cargo: 0, fuel: 0, shield: 0 };
+    this.maxShield = 0; this.shieldRegen = 0; this.shieldRegenDelay = 3.0; this.shieldDelay = 0;
+    // this.shield 在 recompute() 中于首次构建时充满
     this.thrusting = false;
     this.fireTimer = 0;
     this.weapon = 0;               // 0=主炮 1=散射炮
@@ -34,6 +36,10 @@ class Player {
     this.spreadCD = Math.max(0.3, 0.78 - this.up.weapon * 0.07);   // 散射炮射击间隔
     this.spreadCount = 3 + Math.min(2, Math.floor(this.up.weapon / 3)); // 散射弹数随武器等级增长(3~5)
     this.cargoCap = 50 + this.up.cargo * 30;
+    this.maxShield = 40 + this.up.shield * 25;       // 护盾能量上限
+    this.shieldRegen = 9 + this.up.shield * 3;        // 每秒回充量
+    this.shieldRegenDelay = 3.0;                       // 受击后延迟回充时间
+    if (this.shield === undefined) this.shield = this.maxShield;
   }
 
   totalCargo() { return this.cargo.mineral + this.cargo.energy + this.cargo.rare; }
@@ -89,6 +95,9 @@ class Player {
       this.fireTimer = cd;
     }
     if (this.invuln > 0) this.invuln -= dt;
+    // 护盾自动回充（受击后先等待 shieldRegenDelay 秒）
+    if (this.shieldDelay > 0) this.shieldDelay -= dt;
+    else if (this.shield < this.maxShield) this.shield = Math.min(this.maxShield, this.shield + this.shieldRegen * dt);
   }
 
   shoot() {
@@ -120,11 +129,20 @@ class Player {
 
   hit(dmg) {
     if (this.invuln > 0) return;
-    this.hp -= dmg;
-    if (typeof Game !== 'undefined' && Game.dmgWindow !== undefined) Game.dmgWindow += dmg;
+    // 护盾优先吸收伤害
+    if (this.shield > 0) {
+      const absorbed = Math.min(this.shield, dmg);
+      this.shield -= absorbed;
+      dmg -= absorbed;
+    }
+    if (dmg > 0) {
+      this.hp -= dmg;
+      if (typeof Game !== 'undefined' && Game.dmgWindow !== undefined) Game.dmgWindow += dmg;
+    }
+    this.shieldDelay = this.shieldRegenDelay;                 // 受击后暂停回充
     this.invuln = 0.6;
     Game.shake(6);
-    Game.flash('#ff4d4d');
+    Game.flash(this.shield > 0 ? '#5ad7ff' : '#ff4d4d');      // 护盾吸收显青色，破盾受伤显红色
     if (this.hp <= 0) { this.hp = 0; Game.onPlayerDeath(); }
   }
 

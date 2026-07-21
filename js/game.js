@@ -8,6 +8,7 @@ const UPGRADES = [
   { key: 'weapon', name: '武器系统', desc: '提升伤害与射速',         cost: { energy: 18, rare: 6 } },
   { key: 'cargo',  name: '货舱扩容', desc: '提升资源携带上限',       cost: { mineral: 22, energy: 12 } },
   { key: 'fuel',   name: '燃料舱',   desc: '提升最大燃料储备',       cost: { mineral: 12, energy: 14 } },
+  { key: 'shield', name: '护盾发生器', desc: '提升护盾能量与回充速度', cost: { mineral: 16, energy: 10 } },
 ];
 
 const Game = {
@@ -228,6 +229,7 @@ const Game = {
     this.player.x = CONFIG.WORLD / 2; this.player.y = CONFIG.WORLD / 2;
     this.player.vx = 0; this.player.vy = 0; this.player.angle = -Math.PI / 2;
     this.player.hp = this.player.maxHp; this.player.fuel = this.player.maxFuel;
+    this.player.shield = this.player.maxShield;     // 跃迁视为安全过渡，护盾补满
     this.jumpCD = 1.0; this.spawnTimer = 18;
   },
 
@@ -487,6 +489,7 @@ const Game = {
     this.player.up[key] = lvl + 1;
     this.player.recompute();
     this.player.hp = this.player.maxHp; this.player.fuel = this.player.maxFuel;
+    this.player.shield = this.player.maxShield;
     this.sfx('buy');
     this.msg(`升级完成：${UPGRADES.find(u => u.key === key).name} → Lv.${lvl + 1}`);
     this.renderDock();
@@ -632,6 +635,8 @@ const Game = {
     document.getElementById('sysRace').textContent = '主导种族：' + this.systemRace.name;
     document.getElementById('hpFill').style.width = (p.hp / p.maxHp * 100) + '%';
     document.getElementById('hpText').textContent = `船体 ${Math.ceil(p.hp)}/${p.maxHp}`;
+    document.getElementById('shieldFill').style.width = (p.shield / p.maxShield * 100) + '%';
+    document.getElementById('shieldText').textContent = `护盾 ${Math.ceil(p.shield)}/${p.maxShield}`;
     document.getElementById('fuelFill').style.width = (p.fuel / p.maxFuel * 100) + '%';
     document.getElementById('fuelText').textContent = `燃料 ${Math.ceil(p.fuel)}/${p.maxFuel}`;
     const wh = this.warehouse ? this.warehouse.mineral + this.warehouse.energy + this.warehouse.rare : 0;

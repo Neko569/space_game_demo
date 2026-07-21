@@ -39,6 +39,7 @@ body { display: flex; align-items: center; justify-content: center; }
 .bar { flex: 1; height: 12px; background: rgba(10,18,34,0.8); border: 1px solid #243a5e; border-radius: 6px; overflow: hidden; }
 .fill { height: 100%; transition: width 0.15s; }
 .fill.hp { background: linear-gradient(90deg, #ff5a5a, #ff9b6b); }
+.fill.shield { background: linear-gradient(90deg, #2ad6c8, #5ad7ff); }
 .fill.fuel { background: linear-gradient(90deg, #3fa9ff, #5ad7ff); }
 .bar-text { font-size: 10px; color: #b9cae6; width: 64px; text-align: right; }
 .cargo { font-size: 11px; color: #c9d6ee; margin-top: 2px; background: rgba(10,18,34,0.6); padding: 3px 6px; border-radius: 5px; display: inline-block; }
