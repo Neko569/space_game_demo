@@ -62,29 +62,94 @@ const Game = {
     });
   },
 
-  // 触屏控制（手机端自动显示）
+  // 虚拟摇杆 + 开火（手机端自动启用）
   setupTouch() {
     const show = ('ontouchstart' in window) || navigator.maxTouchPoints > 0 || window.innerWidth < 820;
     if (show) document.body.classList.add('touchui');
-    const bind = (id, key) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const down = (e) => { e.preventDefault(); Input.keys[key] = true; Input.pressed[key] = true; };
-      const up = (e) => { e.preventDefault(); Input.keys[key] = false; };
-      el.addEventListener('pointerdown', down);
-      el.addEventListener('pointerup', up);
-      el.addEventListener('pointercancel', up);
-      el.addEventListener('pointerleave', up);
+    const stage = document.getElementById('stage');
+    const joyBase = document.getElementById('joyBase');
+    const joyKnob = document.getElementById('joyKnob');
+    const BASE_R = 58, KNOB_R = 26, MAX_OFF = BASE_R - KNOB_R;
+    this.joy = { id: null, cx: 0, cy: 0, dx: 0, dy: 0, rl: 0, rt: 0 };
+
+    // 每帧根据摇杆方向重算转向/推进，避免手指静止后持续过转
+    this.applyJoy = () => {
+      const j = this.joy;
+      if (j.id === null) return;
+      const mag = Math.hypot(j.dx, j.dy);
+      Input.keys['w'] = mag > MAX_OFF * 0.5;
+      if (mag < 6) { Input.keys['a'] = false; Input.keys['d'] = false; return; }
+      const target = Math.atan2(j.dx, -j.dy);
+      const pl = this.player; if (!pl) return;
+      let diff = target - pl.angle;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      const dead = 0.10;
+      if (diff > dead) { Input.keys['d'] = true; Input.keys['a'] = false; }
+      else if (diff < -dead) { Input.keys['a'] = true; Input.keys['d'] = false; }
+      else { Input.keys['a'] = false; Input.keys['d'] = false; }
     };
-    bind('btnLeft', 'a');
-    bind('btnRight', 'd');
-    bind('btnThrust', 'w');
-    bind('btnFire', ' ');
+
+    const joyEnd = () => {
+      this.joy.id = null;
+      joyBase.style.display = 'none';
+      Input.keys['w'] = false; Input.keys['a'] = false; Input.keys['d'] = false;
+    };
+    const joyStart = (x, y, id) => {
+      const rect = stage.getBoundingClientRect();
+      this.joy.rl = rect.left; this.joy.rt = rect.top;
+      this.joy.cx = x - rect.left; this.joy.cy = y - rect.top;
+      this.joy.dx = 0; this.joy.dy = 0; this.joy.id = id;
+      joyBase.style.display = 'block';
+      joyBase.style.left = (this.joy.cx - BASE_R) + 'px';
+      joyBase.style.top = (this.joy.cy - BASE_R) + 'px';
+      joyKnob.style.transform = 'translate(0px,0px)';
+      try { stage.setPointerCapture(id); } catch (e) {}
+      this.applyJoy();
+    };
+    const joyMove = (x, y) => {
+      if (this.state !== 'playing') { joyEnd(); return; }
+      this.joy.dx = x - this.joy.rl - this.joy.cx;
+      this.joy.dy = y - this.joy.rt - this.joy.cy;
+      const mag = Math.hypot(this.joy.dx, this.joy.dy);
+      const off = Math.min(mag, MAX_OFF);
+      const nx = mag > 0 ? this.joy.dx / mag : 0, ny = mag > 0 ? this.joy.dy / mag : 0;
+      joyKnob.style.transform = 'translate(' + (nx * off) + 'px,' + (ny * off) + 'px)';
+      this.applyJoy();
+    };
+
+    stage.addEventListener('pointerdown', (e) => {
+      if (this.state !== 'playing') return;
+      if (e.target.id === 'btnFire' || e.target.id === 'btnDock') return;
+      const rect = stage.getBoundingClientRect();
+      if (e.clientX - rect.left < rect.width / 2) {
+        e.preventDefault();
+        joyStart(e.clientX, e.clientY, e.pointerId);
+      }
+    });
+    stage.addEventListener('pointermove', (e) => {
+      if (this.joy.id === e.pointerId) { e.preventDefault(); joyMove(e.clientX, e.clientY); }
+    });
+    const onUp = (e) => { if (this.joy.id === e.pointerId) joyEnd(); };
+    stage.addEventListener('pointerup', onUp);
+    stage.addEventListener('pointercancel', onUp);
+    stage.addEventListener('pointerleave', onUp);
+
+    // 右侧开火：按住持续射击
+    const fire = document.getElementById('btnFire');
+    const fd = (e) => { e.preventDefault(); Input.keys[' '] = true; };
+    const fu = (e) => { e.preventDefault(); Input.keys[' '] = false; };
+    fire.addEventListener('pointerdown', fd); fire.addEventListener('pointerup', fu);
+    fire.addEventListener('pointercancel', fu); fire.addEventListener('pointerleave', fu);
+
+    // 停靠：靠近空间站时显示，点按停靠
     const dock = document.getElementById('btnDock');
     if (dock) {
-      dock.addEventListener('pointerdown', (e) => { e.preventDefault(); Input.keys['e'] = true; Input.pressed['e'] = true; });
-      dock.addEventListener('pointerup', (e) => { e.preventDefault(); Input.keys['e'] = false; });
-      dock.addEventListener('pointercancel', (e) => { e.preventDefault(); Input.keys['e'] = false; });
+      const dd = (e) => { e.preventDefault(); Input.keys['e'] = true; Input.pressed['e'] = true; };
+      const du = (e) => { e.preventDefault(); Input.keys['e'] = false; };
+      dock.addEventListener('pointerdown', dd);
+      dock.addEventListener('pointerup', du);
+      dock.addEventListener('pointercancel', du);
+      dock.addEventListener('pointerleave', du);
     }
   },
 
@@ -153,6 +218,7 @@ const Game = {
 
   update(dt) {
     const p = this.player;
+    if (this.joy && this.joy.id !== null) this.applyJoy();
     p.update(dt);
     this.asteroids.forEach(a => a.update(dt));
     this.enemies.forEach(e => e.update(dt));
@@ -199,14 +265,17 @@ const Game = {
     // 停靠提示
     let nearStation = this.station && Utils.dist(p.x, p.y, this.station.x, this.station.y) < this.station.radius + 36;
     const prompt = document.getElementById('prompt');
+    const dockBtn = document.getElementById('btnDock');
     if (nearStation) {
       prompt.style.display = 'block';
       prompt.textContent = document.body.classList.contains('touchui')
         ? '点击 ⚓ 停靠空间站（维修 / 补给 / 升级）'
         : '按 [E] 停靠空间站（维修 / 补给 / 升级）';
+      if (dockBtn && document.body.classList.contains('touchui')) dockBtn.style.display = 'block';
       if (Input.justPressed('e')) this.openDock();
     } else {
       prompt.style.display = 'none';
+      if (dockBtn) dockBtn.style.display = 'none';
     }
 
     this.updateHUD();

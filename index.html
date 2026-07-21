@@ -52,15 +52,9 @@
 
     <!-- 触屏控制（移动端自动显示） -->
     <div id="touchControls">
-      <div class="tc-left">
-        <button id="btnLeft" class="tbtn" aria-label="左转">⟲</button>
-        <button id="btnRight" class="tbtn" aria-label="右转">⟳</button>
-      </div>
-      <div class="tc-right">
-        <button id="btnDock" class="tbtn dock" aria-label="停靠">⚓</button>
-        <button id="btnFire" class="tbtn fire" aria-label="开火">🔥</button>
-        <button id="btnThrust" class="tbtn thrust" aria-label="推进">▲</button>
-      </div>
+      <div id="joyBase"><div id="joyKnob"></div></div>
+      <button id="btnFire" aria-label="开火">🔥</button>
+      <button id="btnDock" aria-label="停靠">⚓</button>
     </div>
 
     <!-- 开始界面 -->
@@ -77,7 +71,7 @@
           <div><b>A·D / ←→</b> 转向</div><div><b>空格</b> 开火</div>
           <div><b>E</b> 停靠空间站</div><div><b>M</b> 静音</div>
         </div>
-        <p class="tip-mobile">📱 手机竖屏可自动切换虚拟摇杆布局，点击屏幕左下/右下控制飞行与开火。</p>
+        <p class="tip-mobile">📱 手机操作：<b>左半屏拖动</b>＝飞船转向并推进（拖向哪就飞向哪），<b>右半屏按住 🔥</b>＝开火，靠近空间站自动出现 ⚓ 停靠键。</p>
         <button id="startBtn" class="bigbtn">开始探险</button>
       </div>
     </div>
