@@ -308,9 +308,13 @@ class Bullet {
     this.life -= dt;
   }
   draw(ctx) {
+    ctx.save();
+    ctx.shadowColor = this.color; ctx.shadowBlur = 6;
     ctx.fillStyle = this.color;
-    ctx.save(); ctx.shadowColor = this.color; ctx.shadowBlur = 6;
     ctx.fillRect(this.x - 2, this.y - 2, 4, 4);
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(8,8,14,0.85)';
+    ctx.strokeRect(this.x - 2, this.y - 2, 4, 4);
     ctx.restore();
   }
 }
@@ -344,6 +348,7 @@ class Pickup {
       ctx.translate(this.x, this.y); ctx.rotate(this.spin);
       ctx.fillStyle = '#6dffb0'; ctx.shadowColor = '#6dffb0'; ctx.shadowBlur = 8;
       ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(8,8,14,0.85)'; ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,0.85)';
       ctx.beginPath(); ctx.arc(-1.5, -1.5, 2, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
@@ -356,6 +361,7 @@ class Pickup {
     ctx.beginPath();
     ctx.moveTo(0, -6); ctx.lineTo(5, 0); ctx.lineTo(0, 6); ctx.lineTo(-5, 0); ctx.closePath();
     ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(8,8,14,0.8)'; ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
     ctx.beginPath(); ctx.moveTo(0, -6); ctx.lineTo(2, 0); ctx.lineTo(0, 0); ctx.closePath(); ctx.fill();
     ctx.restore();

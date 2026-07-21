@@ -16,6 +16,31 @@ const CONFIG = {
   RESOURCE_COLORS: { mineral: '#9fb4c7', energy: '#5ad7ff', rare: '#ffcf5a' },
   START_FUEL: 100,
   START_HP: 100,
+
+  // —— 无主星渊：稀有度 / 元素 / 厂商 ——
+  RARITIES: [
+    { id: 'common',    name: '常见', color: '#d7dde6', mult: 1.0,  weight: 60 },
+    { id: 'uncommon',  name: '罕见', color: '#5dff7a', mult: 1.25, weight: 25 },
+    { id: 'rare',      name: '稀有', color: '#4ea8ff', mult: 1.6,  weight: 11 },
+    { id: 'epic',      name: '史诗', color: '#c07bff', mult: 2.1,  weight: 3.5 },
+    { id: 'legendary', name: '传奇', color: '#ff9b2f', mult: 3.0,  weight: 0.5 },
+  ],
+  ELEMENTS: {
+    none:     { id: 'none',     name: '物理', color: '#ffe27a', dot: 0, dotTime: 0 },
+    fire:     { id: 'fire',     name: '燃烧', color: '#ff6a3d', dot: 7, dotTime: 3 },
+    shock:    { id: 'shock',    name: '电击', color: '#5ad7ff', dot: 0, dotTime: 0, shieldBonus: 2.0, chain: 90 },
+    corrosive:{ id: 'corrosive',name: '腐蚀', color: '#9bff5a', dot: 6, dotTime: 4, armorPen: true },
+    cryo:     { id: 'cryo',     name: '冰冻', color: '#9ad8ff', dot: 0, dotTime: 0, slow: 0.45 },
+  },
+  MANUFACTURERS: [
+    { id: 'daed',  name: '戴德',   bias: 'damage',   color: '#ff7043' },
+    { id: 'mal',   name: '玛尔',   bias: 'firerate', color: '#42a5f5' },
+    { id: 'jak',   name: '雅各',   bias: 'accuracy', color: '#66bb6a' },
+    { id: 'tedi',  name: '特迪',   bias: 'magazine', color: '#ffca28' },
+    { id: 'vlad',  name: '弗拉德', bias: 'elemental',color: '#ab47bc' },
+    { id: 'hyper', name: '海伯利', bias: 'tech',     color: '#26c6da' },
+  ],
+  XPCURVE: { base: 80, growth: 1.45 },   // 升下一级所需经验 = base * level^growth
 };
 
 // ---- 数学/工具 ----

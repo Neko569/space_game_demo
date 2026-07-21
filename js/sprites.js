@@ -17,17 +17,40 @@ const Sprites = {
   PX: CONFIG.PIXEL,
 
   build(races) {
-    // 飞船：玩家与各敌对种族（共用形状，按种族配色着色）
+    // 飞船：玩家与各敌对种族（共用形状，按种族配色着色）+ Cell-shaded 描边
     for (const r of races) {
-      this.ships[r.id] = this.makeShip(r.color, r.cockpit);
+      this.ships[r.id] = this.outline(this.makeShip(r.color, r.cockpit));
     }
     // 小行星变体
     this.asteroids = [];
     const tones = ['#8a7d6b', '#7d8694', '#9c8f7a', '#6f7a6a', '#8d7a86'];
     for (let i = 0; i < 7; i++) {
-      this.asteroids.push(this.makeAsteroid(Utils.rand(14, 34), Utils.choice(tones)));
+      this.asteroids.push(this.outline(this.makeAsteroid(Utils.rand(14, 34), Utils.choice(tones))));
     }
-    this.station = this.makeStation();
+    this.station = this.outline(this.makeStation());
+  },
+
+  // Cell-shaded：在精灵不透明像素外缘描黑边（漫画风）
+  outline(src, color = '#0a0a12', w = 1) {
+    const S = src.width, T = src.height;
+    const c = newCanvas(S, T);
+    const x = c.getContext('2d');
+    const sd = src.getContext('2d').getImageData(0, 0, S, T).data;
+    const op = (px, py) => (px < 0 || py < 0 || px >= S || py >= T) ? false
+      : sd[(py * S + px) * 4 + 3] > 40;
+    x.drawImage(src, 0, 0);
+    x.fillStyle = color;
+    for (let py = 0; py < T; py++) {
+      for (let px = 0; px < S; px++) {
+        if (op(px, py)) continue;
+        let near = false;
+        for (let dy = -w; dy <= w && !near; dy++)
+          for (let dx = -w; dx <= w && !near; dx++)
+            if ((dx || dy) && op(px + dx, py + dy)) { near = true; break; }
+        if (near) x.fillRect(px, py, 1, 1);
+      }
+    }
+    return c;
   },
 
   // 朝"上"的飞船（16x16 网格，单位=1px）

@@ -67,8 +67,9 @@ body { display: flex; align-items: center; justify-content: center; }
 }
 .panel {
   width: 560px; max-width: 92%; background: linear-gradient(180deg, #0c1426, #0a1020);
-  border: 1px solid #284a7a; border-radius: 12px; padding: 26px 30px;
-  box-shadow: 0 0 40px rgba(50,120,255,0.25);
+  border: 2px solid #0a0a12; border-radius: 12px; padding: 26px 30px;
+  box-shadow: 4px 4px 0 rgba(8,8,14,0.6), 0 0 40px rgba(50,120,255,0.22);
+  outline: 1px solid #3a5e95; outline-offset: -4px;
 }
 .panel.start h1 { font-size: 34px; letter-spacing: 8px; text-align: center; color: #cfe0ff; text-shadow: 0 0 18px rgba(80,150,255,0.7); }
 .subtitle { text-align: center; color: #6f86ad; letter-spacing: 3px; font-size: 12px; margin: 4px 0 16px; }
