@@ -122,6 +122,26 @@ body { display: flex; align-items: center; justify-content: center; }
 .wh-btn.dis { border-color: #ff6b5a; color: #ffd0c8; }
 .wh-btn:active { filter: brightness(1.15); }
 
+/* 飞行中就地丢弃 */
+#discardBtn {
+  position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+  z-index: 6; pointer-events: auto; cursor: pointer;
+  padding: 8px 16px; font-size: 13px; font-weight: 700; color: #ffd0c8;
+  background: rgba(60,30,30,0.6); border: 1px solid #ff6b5a; border-radius: 16px;
+  backdrop-filter: blur(2px); -webkit-tap-highlight-color: transparent;
+}
+#discardBtn:active { filter: brightness(1.15); }
+#discardPanel { position: absolute; left: 50%; bottom: 66px; transform: translateX(-50%); z-index: 18; display: none; width: min(340px, 92%); }
+#discardPanel .panel { width: auto; max-width: 100%; padding: 16px 18px; }
+#discardPanel h3 { color: #ffd0c8; margin-bottom: 4px; font-size: 16px; }
+#discardList { margin: 10px 0; }
+.disc-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; margin-bottom: 6px; background: rgba(18,32,60,0.5); border: 1px solid #244a7a; border-radius: 8px; font-size: 12px; }
+.disc-row .dn { font-weight: 700; min-width: 34px; }
+.disc-row .da { flex: 1; color: #b9cae6; }
+.disc-row .da b { color: #e8f1ff; }
+.disc-actions { display: flex; gap: 8px; margin-top: 6px; }
+.disc-actions .bigbtn { margin-top: 0; font-size: 13px; padding: 9px; }
+
 /* 移动端提示 */
 .tip-mobile { display: none; text-align: center; font-size: 12px; color: #8fd0ff; margin: 12px 0 2px; line-height: 1.5; }
 body.touchui .tip-mobile { display: block; }

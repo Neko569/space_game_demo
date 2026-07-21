@@ -51,6 +51,22 @@
     <!-- 上下文提示 -->
     <div id="prompt" class="hud"></div>
 
+    <!-- 飞行中就地丢弃货舱的按钮 -->
+    <button id="discardBtn" aria-label="丢弃资源">🗑 丢弃</button>
+
+    <!-- 飞行中丢弃面板（非全屏，不暂停游戏） -->
+    <div id="discardPanel" style="display:none">
+      <div class="panel disc">
+        <h3>🗑 丢弃资源</h3>
+        <p class="muted">就地清理货舱，腾出空间继续采集（不影响仓库）。</p>
+        <div id="discardList"></div>
+        <div class="disc-actions">
+          <button id="discardAllBtn" class="bigbtn ghost">全部丢弃</button>
+          <button id="closeDiscardBtn" class="bigbtn ghost">关闭</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 触屏控制（移动端自动显示） -->
     <div id="touchControls">
       <div id="joyBase"><div id="joyKnob"></div></div>

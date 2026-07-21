@@ -55,10 +55,14 @@ const Game = {
     document.getElementById('restartBtn').onclick = () => this.startGame();
     document.getElementById('closeDockBtn').onclick = () => this.closeDock();
     document.getElementById('muteBtn').onclick = () => { this.muted = !this.muted; document.getElementById('muteBtn').textContent = this.muted ? '🔇' : '🔊'; };
+    document.getElementById('discardBtn').onclick = () => this.toggleDiscard();
+    document.getElementById('closeDiscardBtn').onclick = () => this.closeDiscard();
+    document.getElementById('discardAllBtn').onclick = () => this.dumpAll();
     window.addEventListener('keydown', (e) => {
       const k = e.key.toLowerCase();
-      if (k === 'escape' && this.state === 'docked') this.closeDock();
+      if (k === 'escape') { if (document.getElementById('discardPanel').style.display === 'block') this.closeDiscard(); else if (this.state === 'docked') this.closeDock(); return; }
       if (k === 'e' && this.state === 'docked') this.closeDock();
+      if (k === 'x' && this.state === 'playing') { this.toggleDiscard(); return; }
       if (k === 'm') { this.muted = !this.muted; document.getElementById('muteBtn').textContent = this.muted ? '🔇' : '🔊'; }
       if (k === 'q' && this.player) this.player.switchWeapon();
       else if (k === '1' && this.player) this.player.selectWeapon(0);
@@ -123,7 +127,8 @@ const Game = {
 
     stage.addEventListener('pointerdown', (e) => {
       if (this.state !== 'playing') return;
-      if (e.target.id === 'btnFire' || e.target.id === 'btnDock' || e.target.id === 'btnWeapon') return;
+      if (e.target.id === 'btnFire' || e.target.id === 'btnDock' || e.target.id === 'btnWeapon' || e.target.id === 'discardBtn') return;
+      if (e.target.closest && e.target.closest('#discardPanel')) return;
       const rect = stage.getBoundingClientRect();
       if (e.clientX - rect.left < rect.width / 2) {
         e.preventDefault();
@@ -188,6 +193,7 @@ const Game = {
   startGame() {
     this.systemIndex = 0; this.systemSeed = 12345; this.kills = 0;
     this.messages = [];
+    this.closeDiscard();
     this.player = new Player();
     this.player.invuln = 3.0;                 // 开局 3 秒无敌，降低初期压力
     this.player.cargo = { mineral: 24, energy: 14, rare: 1 }; // 起步资源，便于早期升级
@@ -410,6 +416,7 @@ const Game = {
 
   onPlayerDeath() {
     this.state = 'dead';
+    this.closeDiscard();
     this.explode(this.player.x, this.player.y, '#ff5a5a', 40);
     this.sfx('explode');
     document.getElementById('deathStats').textContent =
@@ -420,6 +427,7 @@ const Game = {
   // —— 空间站 / 升级 ——
   openDock() {
     this.state = 'docked';
+    this.closeDiscard();
     this.player.hp = this.player.maxHp;
     this.player.fuel = this.player.maxFuel;
     this.msg('已停靠空间站：船体维修完毕，燃料补满。');
@@ -526,7 +534,48 @@ const Game = {
     this.player.cargo[type] = 0;
     this.sfx('buy');
     this.msg(`已丢弃：${CONFIG.RESOURCE_NAMES[type]} ×${amt}`);
-    this.renderWarehouse(); this.updateHUD();
+    this.renderWarehouse(); this.renderDiscard(); this.updateHUD();
+  },
+
+  // —— 飞行中就地丢弃 ——
+  openDiscard() {
+    if (this.state !== 'playing') return;
+    this.renderDiscard();
+    document.getElementById('discardPanel').style.display = 'block';
+  },
+  closeDiscard() {
+    document.getElementById('discardPanel').style.display = 'none';
+  },
+  toggleDiscard() {
+    if (this.state !== 'playing') return;
+    const el = document.getElementById('discardPanel');
+    if (el.style.display === 'block') this.closeDiscard();
+    else this.openDiscard();
+  },
+  renderDiscard() {
+    const box = document.getElementById('discardList');
+    if (!box) return;
+    box.innerHTML = '';
+    for (const t of CONFIG.RESOURCE_TYPES) {
+      const amt = Math.floor(this.player.cargo[t]);
+      const row = document.createElement('div');
+      row.className = 'disc-row';
+      row.innerHTML = `
+        <span class="dn" style="color:${CONFIG.RESOURCE_COLORS[t]}">${CONFIG.RESOURCE_NAMES[t]}</span>
+        <span class="da">货舱 <b>${amt}</b></span>
+        <button class="wh-btn dis" ${amt <= 0 ? 'disabled style="opacity:.4"' : ''}>丢弃</button>`;
+      const btn = row.querySelector('.wh-btn');
+      if (amt > 0) btn.onclick = () => this.discard(t);
+      box.appendChild(row);
+    }
+  },
+  dumpAll() {
+    let total = 0;
+    for (const t of CONFIG.RESOURCE_TYPES) { total += this.player.cargo[t]; this.player.cargo[t] = 0; }
+    if (total <= 0) { this.msg('货舱已经是空的。'); return; }
+    this.sfx('buy');
+    this.msg(`已丢弃全部资源 ×${Math.floor(total)}`);
+    this.renderDiscard(); this.updateHUD();
   },
 
   // —— 特效 ——
